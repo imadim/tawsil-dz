@@ -38,13 +38,51 @@
                         <p class="text-muted mb-1">
                             <i class="fas fa-map-pin"></i> {{ restaurant.wilaya }}
                         </p>
-                        <p class="mb-0">
+                        <p class="mb-2">
                             <i class="fas fa-phone"></i> {{ restaurant.phone }}
                         </p>
+
+                        <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}"
+                           class="menu-rate">
+                            {% if restaurant.total_reviews %}
+                            <span class="mr-stars">
+                                {% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= (restaurant.rating or 0)|round(0,'common')|int }}">★</span>{% endfor %}
+                            </span>
+                            <b>{{ restaurant.rating }}</b>
+                            <span class="mr-n">{{ restaurant.total_reviews }} تقييم</span>
+                            <span class="mr-go">اقرأ الآراء ←</span>
+                            {% else %}
+                            <span class="mr-new">مطعم جديد — لا تقييمات بعد</span>
+                            {% endif %}
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+
+{# ═══ آخر آراء الزبائن — تساعد على القرار قبل الطلب ═══ #}
+{% if reviews %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <h6 class="mb-0"><i class="fas fa-comment-dots text-warning"></i> ماذا قال الزبائن</h6>
+            <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}"
+               class="btn btn-sm btn-outline-secondary">كل التقييمات ({{ restaurant.total_reviews }})</a>
+        </div>
+        <div class="quick-reviews">
+            {% for r in reviews %}
+            <div class="qr">
+                <div class="qr-top">
+                    <b>{{ r.customer.username if r.customer else 'زبون' }}</b>
+                    <span>{% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= r.stars }}">★</span>{% endfor %}</span>
+                </div>
+                {% if r.comment %}<p>{{ r.comment }}</p>{% else %}<p class="none">بلا تعليق</p>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
         <!-- Menu Items -->
         <h4 class="mb-3"><i class="fas fa-list"></i> القائمة</h4>
@@ -563,4 +601,31 @@ function showToast(title, message) {
     setTimeout(() => tempDiv.remove(), 3000);
 }
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.menu-rate {
+    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: #fff8e6; border: 1px solid #eddfae; border-radius: 10px;
+    padding: 6px 13px; text-decoration: none; font-size: .88rem; color: #55665e;
+}
+.menu-rate:hover { background: #f5a623; border-color: #f5a623; color: #fff; }
+.menu-rate:hover .mr-stars span, .menu-rate:hover b, .menu-rate:hover .mr-n, .menu-rate:hover .mr-go { color: #fff; }
+.mr-stars span { color: #dde5e0; }
+.mr-stars span.on { color: #f5a623; }
+.menu-rate b { color: #12201a; font-weight: 800; }
+.mr-n { color: #8a7440; font-size: .8rem; }
+.mr-go { color: #a3730a; font-weight: 700; font-size: .82rem; }
+.mr-new { color: #9aaaa3; font-size: .84rem; }
+
+.quick-reviews { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.qr { background: #f8fbf9; border: 1px solid #eef3f0; border-radius: 12px; padding: 13px 15px; }
+.qr-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.qr-top b { font-size: .89rem; color: #12201a; }
+.qr-top span span { color: #dde5e0; font-size: .8rem; }
+.qr-top span span.on { color: #f5a623; }
+.qr p { margin: 0; font-size: .85rem; color: #55665e; line-height: 1.75; }
+.qr p.none { color: #b3c1ba; font-style: italic; }
+</style>
 {% endblock %}

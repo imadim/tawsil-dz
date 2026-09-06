@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}تقييمات {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="rvp">
+    {# ═══ ملخّص ═══ #}
+    <div class="rvp-head">
+        {% if restaurant.image_url %}
+        <img src="{{ restaurant.image_url }}" alt="{{ restaurant.name_ar }}">
+        {% else %}
+        <div class="rvp-ph"><i class="fas fa-utensils"></i></div>
+        {% endif %}
+        <div class="rvp-id">
+            <h1>{{ restaurant.name_ar }}</h1>
+            <p>
+                {% if restaurant.cuisine %}{{ restaurant.cuisine }} · {% endif %}
+                {{ restaurant.wilaya }}{% if restaurant.commune %} · {{ restaurant.commune }}{% endif %}
+            </p>
+            {% if restaurant.is_open %}
+            <span class="tag open">مفتوح الآن</span>
+            {% else %}
+            <span class="tag closed">مغلق الآن</span>
+            {% endif %}
+        </div>
+        {% if current_user.is_authenticated and current_user.role == 'customer' and restaurant.is_open %}
+        <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn-order-now">
+            <i class="fas fa-cart-shopping"></i> اطلب من هنا
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="rvp-score">
+                <b>{{ restaurant.rating or 0 }}</b>
+                <div class="big-stars">
+                    {% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= (restaurant.rating or 0)|round(0,'common')|int }}">★</span>{% endfor %}
+                </div>
+                <span class="rvp-total">{{ total }} تقييم · {{ with_comment }} تعليق</span>
+
+                {% if total %}
+                <div class="rvp-bars">
+                    {% for n in [5,4,3,2,1] %}
+                    <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id, stars=n) if breakdown[n] else '#' }}"
+                       class="bar-row {{ 'active' if stars == n }} {{ 'muted' if not breakdown[n] }}">
+                        <span class="bl">{{ n }} ★</span>
+                        <span class="track"><i style="width: {{ (breakdown[n] / total * 100)|round(1) }}%"></i></span>
+                        <span class="bn">{{ breakdown[n] }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% if stars %}
+                <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}" class="clear-filter">
+                    <i class="fas fa-xmark"></i> عرض كل التقييمات
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            {% if reviews %}
+            <div class="rvp-list">
+                {% for r in reviews %}
+                <article class="rv-item">
+                    <div class="rv-who">
+                        <span class="av">{{ r.customer.username[0] if r.customer and r.customer.username else '؟' }}</span>
+                        <div>
+                            <b>{{ r.customer.username if r.customer else 'زبون' }}</b>
+                            <span class="rv-stars">{% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= r.stars }}">★</span>{% endfor %}</span>
+                        </div>
+                        <time>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '' }}</time>
+                    </div>
+                    {% if r.comment %}
+                    <p>{{ r.comment }}</p>
+                    {% else %}
+                    <p class="no-text">قيّم بالنجوم دون تعليق</p>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="rvp-empty">
+                <i class="fas fa-comment-dots"></i>
+                <b>{% if stars %}لا توجد تقييمات بـ {{ stars }} نجوم{% else %}لا توجد تقييمات بعد{% endif %}</b>
+                <p>
+                    {% if stars %}جرّب عدداً آخر من النجوم.
+                    {% else %}هذا المطعم جديد على المنصة — كن أول من يقيّمه بعد طلبك.{% endif %}
+                </p>
+                {% if stars %}
+                <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}" class="btn btn-primary">كل التقييمات</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.rvp { max-width: 960px; margin: 0 auto; }
+.rvp-head {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 20px; padding: 22px 24px;
+    display: flex; align-items: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap;
+}
+.rvp-head img, .rvp-ph { width: 78px; height: 78px; border-radius: 18px; object-fit: cover; flex-shrink: 0; }
+.rvp-ph { background: #e8f3ed; color: #006633; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+.rvp-id { flex: 1 1 220px; }
+.rvp-id h1 { font-weight: 800; font-size: 1.4rem; color: #12201a; margin: 0 0 3px; }
+.rvp-id p { color: #7b8c84; font-size: .88rem; margin: 0 0 7px; }
+.tag { border-radius: 7px; padding: 3px 10px; font-size: .76rem; font-weight: 700; }
+.tag.open { background: #e8f3ed; color: #006633; }
+.tag.closed { background: #eef2f0; color: #7b8c84; }
+.btn-order-now {
+    background: #006633; color: #fff; border-radius: 12px; padding: 12px 24px;
+    font-weight: 700; text-decoration: none; white-space: nowrap;
+}
+.btn-order-now:hover { background: #004d26; color: #fff; }
+
+.rvp-score { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px; text-align: center; }
+.rvp-score > b { display: block; font-size: 3rem; font-weight: 800; color: #12201a; line-height: 1.1; }
+.big-stars span { color: #dde5e0; font-size: 1.4rem; }
+.big-stars span.on { color: #f5a623; }
+.rvp-total { display: block; color: #7b8c84; font-size: .86rem; margin-top: 6px; }
+
+.rvp-bars { display: grid; gap: 5px; margin-top: 20px; }
+.bar-row {
+    display: grid; grid-template-columns: 38px 1fr 28px; align-items: center; gap: 9px;
+    text-decoration: none; padding: 4px 6px; border-radius: 8px;
+}
+.bar-row:hover { background: #f6faf8; }
+.bar-row.active { background: #eef4f0; }
+.bar-row.muted { pointer-events: none; opacity: .5; }
+.bl { font-size: .78rem; color: #7b8c84; white-space: nowrap; }
+.track { height: 8px; background: #eef3f0; border-radius: 99px; overflow: hidden; }
+.track i { display: block; height: 100%; background: #f5a623; border-radius: 99px; }
+.bn { font-size: .78rem; color: #33443c; font-weight: 700; text-align: left; }
+.clear-filter { display: inline-block; margin-top: 14px; color: #b3121b; font-size: .84rem; text-decoration: none; font-weight: 600; }
+
+.rvp-list { display: grid; gap: 12px; }
+.rv-item { background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 18px 20px; }
+.rv-who { display: flex; align-items: center; gap: 11px; margin-bottom: 9px; }
+.av {
+    width: 38px; height: 38px; border-radius: 50%; background: #e8f3ed; color: #006633;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;
+}
+.rv-who b { display: block; font-size: .95rem; color: #12201a; }
+.rv-stars span { color: #dde5e0; font-size: .88rem; }
+.rv-stars span.on { color: #f5a623; }
+.rv-who time { margin-inline-start: auto; color: #b3c1ba; font-size: .78rem; }
+.rv-item p { margin: 0; color: #46564f; font-size: .95rem; line-height: 1.85; }
+.rv-item p.no-text { color: #b3c1ba; font-style: italic; font-size: .88rem; }
+
+.rvp-empty { background: #fff; border: 1px dashed #d5e2db; border-radius: 18px; padding: 48px 24px; text-align: center; }
+.rvp-empty i { font-size: 2.3rem; color: #c3d3ca; display: block; margin-bottom: 14px; }
+.rvp-empty b { display: block; color: #33443c; margin-bottom: 6px; }
+.rvp-empty p { color: #7b8c84; margin: 0 0 16px; font-size: .92rem; }
+</style>
+{% endblock %}

@@ -1106,6 +1106,30 @@ def restaurant_profile(restaurant_id):
 # CUSTOMER ROUTES
 # ============================================
 
+@app.route('/restaurant/<int:restaurant_id>/reviews')
+def restaurant_reviews(restaurant_id):
+    """كل تقييمات مطعم — يفتحها الزبون ليقرّر قبل الطلب"""
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+
+    stars = request.args.get('stars', type=int)
+    q = Review.query.filter_by(target_type='restaurant', target_id=restaurant_id)
+    if stars in (1, 2, 3, 4, 5):
+        q = q.filter_by(stars=stars)
+    reviews = q.order_by(Review.created_at.desc()).limit(100).all()
+
+    breakdown = {n: Review.query.filter_by(target_type='restaurant',
+                                           target_id=restaurant_id, stars=n).count()
+                 for n in range(5, 0, -1)}
+    total = sum(breakdown.values())
+    with_comment = Review.query.filter_by(target_type='restaurant', target_id=restaurant_id)\
+                               .filter(Review.comment != '', Review.comment.isnot(None)).count()
+
+    return render_template('customer/reviews.html',
+                           restaurant=restaurant, reviews=reviews,
+                           breakdown=breakdown, total=total,
+                           with_comment=with_comment, stars=stars)
+
+
 @app.route('/customer/dashboard')
 @login_required
 def customer_dashboard():
@@ -1416,8 +1440,12 @@ def restaurant_menu(restaurant_id):
     
     restaurant = Restaurant.query.get_or_404(restaurant_id)
     menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id, is_available=True).all()
-    
-    return render_template('customer/menu.html', restaurant=restaurant, menu_items=menu_items)
+
+    reviews = Review.query.filter_by(target_type='restaurant', target_id=restaurant_id)\
+                          .order_by(Review.created_at.desc()).limit(3).all()
+
+    return render_template('customer/menu.html', restaurant=restaurant,
+                           menu_items=menu_items, reviews=reviews)
 
 
 @app.route('/order/create', methods=['POST'])

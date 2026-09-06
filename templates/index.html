@@ -198,7 +198,11 @@
                         {% endif %}
 
                         {% if restaurant.rating > 0 %}
-                        <span class="r-rate"><i class="fas fa-star"></i> {{ restaurant.rating }}</span>
+                        <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}"
+                           class="r-rate" title="اقرأ التقييمات">
+                            <i class="fas fa-star"></i> {{ restaurant.rating }}
+                            {% if restaurant.total_reviews %}<b>({{ restaurant.total_reviews }})</b>{% endif %}
+                        </a>
                         {% endif %}
                     </div>
 
@@ -740,6 +744,9 @@
     color: #12201a; border-radius: 9px; padding: 4px 10px; font-size: .8rem; font-weight: 700;
 }
 .r-rate i { color: #f5a623; }
+.r-rate { text-decoration: none; transition: background .2s; }
+.r-rate:hover { background: #fff; }
+.r-rate b { color: #7b8c84; font-weight: 600; font-size: .74rem; }
 .r-admin { padding: 10px 14px 0; }
 .r-body { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
 .r-body h5 { margin: 0 0 2px; font-size: 1.1rem; font-weight: 700; }

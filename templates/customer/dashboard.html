@@ -153,6 +153,12 @@
         <option value="{{ c }}">{{ c }}</option>
         {% endfor %}
     </select>
+    <select id="cRating" class="cf-sel">
+        <option value="">كل التقييمات</option>
+        <option value="4.5">★ 4.5 فأعلى</option>
+        <option value="4">★ 4 فأعلى</option>
+        <option value="3">★ 3 فأعلى</option>
+    </select>
     <label class="cf-tog"><input type="checkbox" id="cOpen" checked> <span>المفتوحة فقط</span></label>
     <button type="button" id="cReset" class="cf-reset" hidden><i class="fas fa-xmark"></i> إزالة</button>
 </div>
@@ -165,6 +171,7 @@
              data-name="{{ restaurant.name_ar }} {{ restaurant.name }}"
              data-wilaya="{{ restaurant.wilaya }}"
              data-cuisine="{{ restaurant.cuisine or 'أخرى' }}"
+             data-rating="{{ restaurant.rating or 0 }}"
              data-open="{{ '1' if restaurant.is_open else '0' }}">
             <div class="card h-100 shadow-sm {{ '' if restaurant.is_open else 'closed-card' }}">
                 <div class="card-body">
@@ -193,6 +200,16 @@
                             {% if restaurant.cuisine %}
                             <small class="d-block text-muted">{{ restaurant.cuisine }}</small>
                             {% endif %}
+                            <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}"
+                               class="rate-link" title="اقرأ آراء الزبائن">
+                                {% if restaurant.total_reviews %}
+                                    <span class="rl-star">★</span>
+                                    <b>{{ restaurant.rating }}</b>
+                                    <span class="rl-n">({{ restaurant.total_reviews }} تقييم)</span>
+                                {% else %}
+                                    <span class="rl-new">جديد — لا تقييمات بعد</span>
+                                {% endif %}
+                            </a>
                         </div>
                     </div>
                     
@@ -233,6 +250,7 @@
 (function () {
     const q = document.getElementById('cSearch'), w = document.getElementById('cWilaya'),
           cu = document.getElementById('cCuisine'), op = document.getElementById('cOpen'),
+          rt = document.getElementById('cRating'),
           rs = document.getElementById('cReset'), cnt = document.getElementById('cCount'),
           none = document.getElementById('cNone');
     const items = Array.from(document.querySelectorAll('.c-item'));
@@ -245,17 +263,18 @@
             const ok = (!t || el.dataset.name.toLowerCase().includes(t))
                     && (!w.value || el.dataset.wilaya === w.value)
                     && (!cu.value || el.dataset.cuisine === cu.value)
+                    && (!rt.value || parseFloat(el.dataset.rating || 0) >= parseFloat(rt.value))
                     && (!op.checked || el.dataset.open === '1');
             el.style.display = ok ? '' : 'none';
             if (ok) shown++;
         });
-        const filtering = !!(t || w.value || cu.value) || !op.checked;
+        const filtering = !!(t || w.value || cu.value || rt.value) || !op.checked;
         none.style.display = shown ? 'none' : '';
         rs.hidden = !filtering;
         cnt.textContent = shown === items.length ? '' : `يظهر ${shown} من ${items.length} مطعم`;
     }
-    [q, w, cu, op].forEach(el => { el.addEventListener('input', apply); el.addEventListener('change', apply); });
-    rs.addEventListener('click', () => { q.value=''; w.value=''; cu.value=''; op.checked=true; apply(); });
+    [q, w, cu, rt, op].forEach(el => { el.addEventListener('input', apply); el.addEventListener('change', apply); });
+    rs.addEventListener('click', () => { q.value=''; w.value=''; cu.value=''; rt.value=''; op.checked=true; apply(); });
     apply();
 })();
 
@@ -302,6 +321,16 @@ function cancelOrder(orderId) {
             padding: 8px 13px; font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
 .cf-reset:hover { background: #b3121b; color: #fff; }
 .cf-count { color: #7b8c84; font-size: .85rem; margin: 0 4px 16px; min-height: 18px; }
+.rate-link {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 4px;
+    text-decoration: none; font-size: .82rem; color: #55665e;
+    background: #f6faf8; border: 1px solid #e6ede9; border-radius: 8px; padding: 2px 9px;
+}
+.rate-link:hover { background: #fff8e6; border-color: #eddfae; color: #12201a; }
+.rl-star { color: #f5a623; }
+.rate-link b { color: #12201a; font-weight: 700; }
+.rl-n { color: #9aaaa3; font-size: .76rem; }
+.rl-new { color: #9aaaa3; font-size: .76rem; }
 .closed-card { opacity: .68; }
 .closed-card img { filter: grayscale(.85); }
 .cf-none { background: #fff; border: 1px dashed #d5e2db; border-radius: 16px; padding: 40px 20px;
