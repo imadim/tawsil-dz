@@ -39,9 +39,15 @@
             </div>
         </div>
 
-        <div class="col-lg-5 text-center d-none d-lg-block">
-            <img src="{{ url_for('static', filename='images/logo.png') }}"
-                 alt="توصيل DZ" class="hero-logo">
+        <div class="col-lg-5">
+            <div class="hero-visual">
+                <div class="hv-glow"></div>
+                <div class="hv-card">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="توصيل DZ">
+                </div>
+                <span class="hv-chip hv-chip-a"><i class="fas fa-location-crosshairs"></i> تتبّع حي</span>
+                <span class="hv-chip hv-chip-b"><i class="fas fa-bolt"></i> 30 دقيقة</span>
+            </div>
         </div>
     </div>
 </section>
@@ -314,7 +320,30 @@
 .hero-stats div { display: flex; flex-direction: column; }
 .hero-stats strong { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
 .hero-stats span { font-size: .84rem; color: rgba(255,255,255,.72); }
-.hero-logo { max-width: 300px; width: 100%; filter: drop-shadow(0 14px 32px rgba(0,0,0,.28)); }
+
+/* بطاقة اللوغو — خلفية بيضاء باش يبان اللوغو بوضوح فوق الأخضر */
+.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 14px 0; }
+.hv-glow {
+    position: absolute; width: 330px; height: 330px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.30) 0%, rgba(255,255,255,0) 68%);
+    filter: blur(6px); pointer-events: none;
+}
+.hv-card {
+    position: relative; background: #fff; border-radius: 30px;
+    padding: 26px 30px; box-shadow: 0 26px 60px rgba(0,0,0,.30), 0 3px 0 rgba(255,255,255,.5) inset;
+    transform: rotate(-1.6deg); transition: transform .35s ease;
+}
+.hv-card:hover { transform: rotate(0deg) translateY(-4px); }
+.hv-card img { width: 236px; max-width: 100%; height: auto; display: block; }
+.hv-chip {
+    position: absolute; background: #fff; color: #12201a; border-radius: 999px;
+    padding: 8px 15px; font-size: .82rem; font-weight: 700; white-space: nowrap;
+    box-shadow: 0 10px 26px rgba(0,0,0,.22); display: inline-flex; align-items: center; gap: 7px;
+}
+.hv-chip i { color: #006633; font-size: .8rem; }
+.hv-chip-a { top: 6px; right: 4px; }
+.hv-chip-b { bottom: 10px; left: 2px; }
+.hv-chip-b i { color: #e07b00; }
 
 /* ───────── كيفاش تخدم ───────── */
 .how { margin-bottom: 56px; }
@@ -446,7 +475,14 @@
 
 /* ───────── الهاتف ───────── */
 @media (max-width: 991px) {
-    .hero { padding: 38px 24px; border-radius: 20px; }
+    .hero { padding: 34px 22px 30px; border-radius: 20px; }
+    .hero-visual { padding: 4px 0 0; margin-bottom: 24px; }
+    .hv-card { padding: 18px 22px; border-radius: 24px; }
+    .hv-card img { width: 168px; }
+    .hv-glow { width: 220px; height: 220px; }
+    .hv-chip { font-size: .74rem; padding: 6px 12px; }
+    .hv-chip-a { top: -2px; right: 0; }
+    .hv-chip-b { bottom: 2px; left: 0; }
     .hero-title { font-size: 2.1rem; }
     .hero-sub { font-size: .98rem; }
     .hero-stats { gap: 26px; }
