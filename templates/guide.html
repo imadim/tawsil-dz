@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}دليل الاستعمال - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="guide-hero text-center">
+    <img src="{{ url_for('static', filename='images/logo-mark.png') }}" alt="توصيل DZ" class="gh-mark">
+    <h1>دليل الاستعمال</h1>
+    <p>اختار الدليل لي يخصّك — كل واحد 4 صفحات، مختصر وعملي، تنجّم تقراه هنا ولا تحمّله PDF.</p>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="guide-card h-100">
+            <div class="gc-icon" style="background:#e8f3ed;color:#006633;">
+                <i class="fas fa-bag-shopping"></i>
+            </div>
+            <h3>دليل الزبون</h3>
+            <p>كيفاش تثبّت التطبيق على هاتفك، دير حساب، تطلب من مطعم، وتتبّع السائق على الخريطة حتى يوصلك.</p>
+            <ul class="gc-list">
+                <li>تثبيت التطبيق (أندرويد وآيفون)</li>
+                <li>الطلب والخلاص والتكلفة</li>
+                <li>التتبّع الحي والإشعارات</li>
+            </ul>
+            <div class="gc-actions">
+                <a href="{{ url_for('guide_download', role='customer') }}" target="_blank" class="btn btn-primary w-100">
+                    <i class="fas fa-book-open"></i> اقرأ الدليل
+                </a>
+                <a href="{{ url_for('static', filename='docs/دليل-الزبون.pdf') }}" download class="btn btn-soft w-100">
+                    <i class="fas fa-download"></i> حمّل PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="guide-card h-100">
+            <div class="gc-icon" style="background:#fff3e6;color:#e07b00;">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <h3>دليل صاحب المطعم</h3>
+            <p>سجّل مطعمك، بني قائمة أطباقك، وعالج الطلبيات من وقت ما توصل حتى يخذاها السائق.</p>
+            <ul class="gc-list">
+                <li>التسجيل وتحديد الموقع</li>
+                <li>إدارة القائمة والأطباق</li>
+                <li>العمولة والمدخول بمثال</li>
+            </ul>
+            <div class="gc-actions">
+                <a href="{{ url_for('guide_download', role='restaurant') }}" target="_blank" class="btn btn-primary w-100">
+                    <i class="fas fa-book-open"></i> اقرأ الدليل
+                </a>
+                <a href="{{ url_for('static', filename='docs/دليل-صاحب-المطعم.pdf') }}" download class="btn btn-soft w-100">
+                    <i class="fas fa-download"></i> حمّل PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="guide-card h-100">
+            <div class="gc-icon" style="background:#fdeef0;color:#D21034;">
+                <i class="fas fa-motorcycle"></i>
+            </div>
+            <h3>دليل السائق</h3>
+            <p>دير حسابك، افتح على الخدمة، اقبل الطلبيات، وكمّل التوصيل خطوة بخطوة مع كل واش يخص أرباحك.</p>
+            <ul class="gc-list">
+                <li>الحساب وإذن الموقع</li>
+                <li>قبول الطلبية والتوصيل</li>
+                <li>الأرباح ونصائح عملية</li>
+            </ul>
+            <div class="gc-actions">
+                <a href="{{ url_for('guide_download', role='driver') }}" target="_blank" class="btn btn-primary w-100">
+                    <i class="fas fa-book-open"></i> اقرأ الدليل
+                </a>
+                <a href="{{ url_for('static', filename='docs/دليل-السائق.pdf') }}" download class="btn btn-soft w-100">
+                    <i class="fas fa-download"></i> حمّل PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="guide-install">
+    <div class="row align-items-center g-4">
+        <div class="col-md-7">
+            <span class="gi-tag">مشترك بين الأدوار الثلاثة</span>
+            <h2>ثبّت التطبيق على هاتفك</h2>
+            <p class="mb-4">ما تحتاجش Play Store. حلّ الموقع من متصفح هاتفك، واضغط زر «ثبّت التطبيق»
+               لي يبان تحت الشاشة. تلقى أيقونة توصيل DZ في شاشتك، تخدم بملء الشاشة وتوصلك الإشعارات.</p>
+            <div class="gi-steps">
+                <div class="gi-step"><span>1</span> حلّ الموقع من متصفح الهاتف</div>
+                <div class="gi-step"><span>2</span> اضغط «ثبّت التطبيق»</div>
+                <div class="gi-step"><span>3</span> اقبل إذن الإشعارات</div>
+            </div>
+        </div>
+        <div class="col-md-5 text-center">
+            <div class="gi-phone">
+                <img src="{{ url_for('static', filename='images/icon-192.png') }}" alt="أيقونة التطبيق">
+                <strong>توصيل DZ</strong>
+                <small>على شاشة هاتفك</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .guide-hero {
+        background: linear-gradient(135deg, #f3f8f5 0%, #e9f2ec 100%);
+        border-radius: 22px; padding: 48px 24px 40px; margin-bottom: 40px;
+    }
+    .guide-hero .gh-mark { width: 92px; height: auto; margin-bottom: 14px; }
+    .guide-hero h1 { font-weight: 800; color: #12201a; margin-bottom: 10px; }
+    .guide-hero p { color: #5d6f67; max-width: 560px; margin: 0 auto; }
+
+    .guide-card {
+        background: #fff; border-radius: 18px; padding: 28px 24px;
+        border: 1px solid #e6ede9; display: flex; flex-direction: column;
+        transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .guide-card:hover { transform: translateY(-6px); box-shadow: 0 14px 34px rgba(0,60,30,.10); }
+    .gc-icon {
+        width: 58px; height: 58px; border-radius: 16px; font-size: 1.5rem;
+        display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+    }
+    .guide-card h3 { font-size: 1.22rem; font-weight: 800; color: #12201a; margin-bottom: 10px; }
+    .guide-card > p { color: #5d6f67; font-size: .95rem; line-height: 1.8; }
+    .gc-list { list-style: none; padding: 0; margin: 14px 0 22px; }
+    .gc-list li { color: #46564f; font-size: .9rem; padding: 5px 22px 5px 0; position: relative; }
+    .gc-list li::before {
+        content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+        position: absolute; right: 0; top: 6px; color: #006633; font-size: .75rem;
+    }
+    .gc-actions { margin-top: auto; display: grid; gap: 9px; }
+    .btn-soft { background: #f1f5f3; color: #33443c; border: 1px solid #e2eae6; font-weight: 600; }
+    .btn-soft:hover { background: #e7ede9; color: #12201a; }
+
+    .guide-install {
+        background: linear-gradient(135deg, #006633 0%, #009149 100%);
+        color: #fff; border-radius: 22px; padding: 42px 38px; margin-bottom: 20px;
+    }
+    .gi-tag {
+        display: inline-block; background: rgba(255,255,255,.16); border-radius: 999px;
+        padding: 5px 14px; font-size: .8rem; font-weight: 600; margin-bottom: 14px;
+    }
+    .guide-install h2 { font-weight: 800; margin-bottom: 12px; }
+    .guide-install p { color: rgba(255,255,255,.86); line-height: 1.9; }
+    .gi-steps { display: flex; flex-wrap: wrap; gap: 10px; }
+    .gi-step { background: rgba(255,255,255,.13); border-radius: 12px; padding: 9px 15px; font-size: .88rem; font-weight: 600; }
+    .gi-step span {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 21px; height: 21px; border-radius: 50%; background: #fff; color: #006633;
+        font-size: .75rem; margin-left: 7px;
+    }
+    .gi-phone {
+        background: rgba(255,255,255,.12); border-radius: 22px; padding: 26px 18px;
+        display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .gi-phone img { width: 78px; border-radius: 20px; margin-bottom: 10px; }
+    .gi-phone strong { font-size: 1rem; }
+    .gi-phone small { color: rgba(255,255,255,.7); }
+
+    @media (max-width: 767px) {
+        .guide-install { padding: 30px 22px; }
+        .guide-hero { padding: 34px 18px 30px; }
+    }
+</style>
+{% endblock %}

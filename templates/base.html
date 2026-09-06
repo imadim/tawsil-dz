@@ -40,6 +40,34 @@
             background: linear-gradient(135deg, var(--dz-green) 0%, #008844 100%) !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
+        .brand-mark {
+            height: 42px; width: auto;
+            background: #fff; border-radius: 11px; padding: 3px;
+        }
+        .brand-text { font-weight: 800; font-size: 1.18rem; color: #fff; line-height: 1; }
+        .brand-text span { color: #ffd66b; }
+
+        .site-footer { background: #12201a; color: #cfdad4; padding: 46px 0 0; }
+        .site-footer h6 { color: #fff; font-weight: 700; margin-bottom: 16px; font-size: 1rem; }
+        .footer-logo { width: 132px; height: auto; background: #fff; border-radius: 14px; padding: 8px 10px; }
+        .footer-tag { color: #8fd9ae; font-size: .88rem; margin: 12px 0 8px; font-weight: 600; }
+        .footer-desc { color: #93a49c; font-size: .88rem; line-height: 1.9; max-width: 330px; }
+        .footer-links { list-style: none; padding: 0; margin: 0; }
+        .footer-links li { margin-bottom: 10px; font-size: .9rem; color: #a8b8b0; }
+        .footer-links a { color: #a8b8b0; text-decoration: none; }
+        .footer-links a:hover { color: #fff; }
+        .footer-links i { width: 18px; color: #4fae7a; }
+        .footer-bottom {
+            border-top: 1px solid #24352c; margin-top: 34px; padding: 18px 0;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: .84rem; color: #7d8f87; flex-wrap: wrap; gap: 10px;
+        }
+        .dz-flag { display: inline-flex; gap: 3px; }
+        .dz-flag i { width: 15px; height: 10px; border-radius: 2px; display: block; }
+        .dz-flag i:nth-child(1) { background: #006633; }
+        .dz-flag i:nth-child(2) { background: #fff; }
+        .dz-flag i:nth-child(3) { background: #D21034; }
         
         .btn-primary {
             background: var(--dz-green);
@@ -206,19 +234,21 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-motorcycle"></i> <strong>توصيل DZ</strong>
-                  <img 
-        src="https://flagcdn.com/w40/dz.png" 
-        alt="Algeria Flag" 
-        style="width: 30px; height: 20px; border-radius: 3px; margin-left: 5px; vertical-align: middle;"
-                 >
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <img src="{{ url_for('static', filename='images/logo-mark.png') }}"
+                     alt="توصيل DZ" class="brand-mark">
+                <span class="brand-text">توصيل <span>DZ</span></span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('guide') }}">
+                            <i class="fas fa-circle-question"></i> دليل الاستعمال
+                        </a>
+                    </li>
                     {% if current_user.is_authenticated %}
                         <li class="nav-item">
                             <a class="nav-link" href="#">
@@ -273,20 +303,38 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-4 mt-5">
+    <footer class="site-footer mt-5">
         <div class="container">
-            <p class="mb-2">
-                <img 
-        src="https://flagcdn.com/w40/dz.png" 
-        alt="Algeria Flag" 
-        style="width: 30px; height: 20px; border-radius: 3px; margin-left: 5px; vertical-align: middle;"
-                >
-                &copy; 2026 توصيل جزائري. كامل الحقوق محفوظة.
-            </p>
-            <p class="mb-0">
-                <i class="fas fa-phone"></i> 0550-123-456 | 
-                <i class="fas fa-envelope"></i> contact@delivery.dz
-            </p>
+            <div class="row g-4 align-items-start">
+                <div class="col-md-5">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}"
+                         alt="توصيل DZ" class="footer-logo">
+                    <p class="footer-tag">منتوجك ... أقرب إليك</p>
+                    <p class="footer-desc">منصة توصيل جزائرية تربط الزبون بالمطاعم القريبة منه،
+                       مع تتبّع حي للسائق من المطعم حتى الباب.</p>
+                </div>
+                <div class="col-md-3">
+                    <h6>روابط مفيدة</h6>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('index') }}">الصفحة الرئيسية</a></li>
+                        <li><a href="{{ url_for('guide') }}">دليل الاستعمال</a></li>
+                        <li><a href="{{ url_for('restaurant_register') }}">سجّل مطعمك</a></li>
+                        <li><a href="{{ url_for('register') }}">دير حساب</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>تواصل معنا</h6>
+                    <ul class="footer-links">
+                        <li><i class="fas fa-phone"></i> 0550-123-456</li>
+                        <li><i class="fas fa-envelope"></i> contact@delivery.dz</li>
+                        <li><i class="fas fa-location-dot"></i> الجزائر</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 توصيل DZ. كامل الحقوق محفوظة.</span>
+                <span class="dz-flag"><i></i><i></i><i></i></span>
+            </div>
         </div>
     </footer>
 

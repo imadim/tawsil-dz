@@ -5,7 +5,7 @@
    - لا نخزّن أي طلب API أو socket.io إطلاقاً (بيانات حيّة)
 */
 
-const VERSION    = 'tawsil-v1';
+const VERSION    = 'tawsil-v2';
 const SHELL      = `${VERSION}-shell`;
 const RUNTIME    = `${VERSION}-runtime`;
 const OFFLINE_URL = '/offline';

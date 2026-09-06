@@ -3,234 +3,455 @@
 {% block title %}الصفحة الرئيسية - توصيل DZ{% endblock %}
 
 {% block content %}
-<div class="hero-section text-center">
-    <h1 class="display-4">
-        <i class="fas fa-utensils"></i> مرحبا بيك في توصيل DZ
-    </h1>
-    <p class="lead">اطلب واش تحب تاكل وتوصلك في دقايق</p>
-    {% if not current_user.is_authenticated %}
-    <div class="mt-4">
-        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg mx-2">
-            <i class="fas fa-user-plus"></i> ابدأ الآن
-        </a>
-        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg mx-2">
-            <i class="fas fa-sign-in-alt"></i> دخول
-        </a>
-    </div>
-    {% endif %}
-</div>
 
-<!-- Features -->
-<div class="row text-center mb-5">
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <i class="fas fa-bolt fa-3x text-primary mb-3"></i>
-                <h5>توصيل سريع</h5>
-                <p class="text-muted">طلبيتك توصلك في أقل من 30 دقيقة</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <i class="fas fa-map-marked-alt fa-3x text-success mb-3"></i>
-                <h5>تتبع مباشر</h5>
-                <p class="text-muted">تتبع احداثيات السائق  لحظة بلحظة</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <i class="fas fa-money-bill-wave fa-3x text-warning mb-3"></i>
-                <h5>خلاص مريح</h5>
-                <p class="text-muted">ادفع نقدا أو بالبطاقة</p>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+    <div class="hero-bg"></div>
+    <div class="row align-items-center g-4 position-relative">
+        <div class="col-lg-7">
+            <span class="hero-pill"><i class="fas fa-bolt"></i> توصيل في أقل من 30 دقيقة</span>
+            <h1 class="hero-title">اطلب واش تحب تاكل<br><span>ويوصلك للباب</span></h1>
+            <p class="hero-sub">منتوجك ... أقرب إليك. اختار من المطاعم القريبة منك، أطلب في دقيقة،
+               وتبّع السائق على الخريطة لحظة بلحظة حتى يوصلك.</p>
 
-<!-- Restaurants -->
-<h2 class="mb-4">
-    <i class="fas fa-store"></i> المطاعم المتاحة
-    <span class="badge bg-primary">{{ restaurants|length }}</span>
-</h2>
-
-<div class="row">
-    {% if restaurants %}
-        {% for restaurant in restaurants %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm restaurant-card">
-
-                <!-- ── RESTAURANT IMAGE ── -->
-                {% if restaurant.image_url %}
-                <img src="{{ restaurant.image_url }}" 
-                     class="card-img-top" 
-                     style="height: 200px; object-fit: cover;" 
-                     alt="{{ restaurant.name_ar }}"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                <!-- fallback shown if image fails to load -->
-                <div class="card-img-top bg-gradient text-white d-flex align-items-center justify-content-center" 
-                     style="height:200px; background:linear-gradient(135deg,#006400 0%,#004d00 100%); display:none !important;">
-                    <i class="fas fa-utensils fa-4x"></i>
-                </div>
+            <div class="hero-actions">
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn btn-hero-main">
+                        <i class="fas fa-rocket"></i> ابدأ الآن مجاناً
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-hero-ghost">
+                        <i class="fas fa-arrow-left-to-bracket"></i> عندي حساب
+                    </a>
                 {% else %}
-                <div class="card-img-top bg-gradient text-white d-flex align-items-center justify-content-center" 
-                     style="height: 200px; background: linear-gradient(135deg, #006400 0%, #004d00 100%);">
-                    <i class="fas fa-utensils fa-4x"></i>
-                </div>
+                    <a href="#restaurants" class="btn btn-hero-main">
+                        <i class="fas fa-utensils"></i> شوف المطاعم
+                    </a>
+                    <a href="{{ url_for('guide') }}" class="btn btn-hero-ghost">
+                        <i class="fas fa-circle-question"></i> دليل الاستعمال
+                    </a>
                 {% endif %}
+            </div>
 
-                <!-- ── ADMIN UPLOAD BUTTON (only visible to admin) ── -->
-                {% if current_user.is_authenticated and current_user.role == 'admin' %}
-                <div class="px-2 pt-2">
-                    <form action="{{ url_for('upload_restaurant_image', restaurant_id=restaurant.id) }}" 
-                          method="POST" 
-                          enctype="multipart/form-data"
-                          class="d-flex gap-2 align-items-center">
-                        <input type="file" 
-                               name="image" 
-                               accept="image/*"
-                               class="form-control form-control-sm"
-                               onchange="this.form.submit()"
-                               style="font-size:12px;">
-                        <label class="text-muted small mb-0" style="white-space:nowrap;">
-                            <i class="fas fa-camera"></i> صورة
-                        </label>
+            <div class="hero-stats">
+                <div><strong>{{ restaurants|length }}</strong><span>مطعم</span></div>
+                <div><strong>{{ restaurants|selectattr('is_open')|list|length }}</strong><span>مفتوح الآن</span></div>
+                <div><strong>200 د.ج</strong><span>رسوم التوصيل</span></div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 text-center d-none d-lg-block">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="توصيل DZ" class="hero-logo">
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ كيفاش تخدم ═══════════ -->
+<section class="how">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="how-card">
+                <div class="how-num">1</div>
+                <i class="fas fa-store how-ico"></i>
+                <h5>اختار مطعم</h5>
+                <p>شوف المطاعم المفتوحة القريبة منك وتصفّح قوائمها.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="how-card">
+                <div class="how-num">2</div>
+                <i class="fas fa-cart-shopping how-ico"></i>
+                <h5>أطلب واخلّص</h5>
+                <p>زيد واش تحب للسلة، اكتب عنوانك، واختار كاش ولا بطاقة.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="how-card">
+                <div class="how-num">3</div>
+                <i class="fas fa-location-crosshairs how-ico"></i>
+                <h5>تبّع السائق</h5>
+                <p>شوف السائق على الخريطة وين راه وصل حتى يجي عندك.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ المطاعم ═══════════ -->
+<section id="restaurants">
+    <div class="sec-head">
+        <div>
+            <h2>المطاعم المتاحة</h2>
+            <p>{{ restaurants|length }} مطعم على المنصة</p>
+        </div>
+    </div>
+
+    {% if restaurants %}
+    <div class="filter-bar">
+        <div class="fb-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="قلّب على مطعم بالاسم...">
+        </div>
+        <select id="wilayaFilter" class="fb-select">
+            <option value="">كل الولايات</option>
+            {% for w in restaurants|map(attribute='wilaya')|unique|sort %}
+            <option value="{{ w }}">{{ w }}</option>
+            {% endfor %}
+        </select>
+        <label class="fb-toggle">
+            <input type="checkbox" id="openOnly"> <span>المفتوحة فقط</span>
+        </label>
+    </div>
+    <p class="fb-count" id="resultCount"></p>
+    {% endif %}
+
+    <div class="row g-4" id="restaurantGrid">
+        {% if restaurants %}
+            {% for restaurant in restaurants %}
+            <div class="col-md-6 col-lg-4 r-item"
+                 data-name="{{ restaurant.name_ar }} {{ restaurant.name }}"
+                 data-wilaya="{{ restaurant.wilaya }}"
+                 data-open="{{ '1' if restaurant.is_open else '0' }}">
+                <div class="r-card">
+                    <div class="r-media">
+                        {% if restaurant.image_url %}
+                        <img src="{{ restaurant.image_url }}" alt="{{ restaurant.name_ar }}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="r-media-fb" style="display:none;"><i class="fas fa-utensils"></i></div>
+                        {% else %}
+                        <div class="r-media-fb"><i class="fas fa-utensils"></i></div>
+                        {% endif %}
+
+                        {% if restaurant.is_open %}
+                        <span class="r-badge open"><i class="fas fa-circle"></i> مفتوح</span>
+                        {% else %}
+                        <span class="r-badge closed"><i class="fas fa-circle"></i> مغلق</span>
+                        {% endif %}
+
+                        {% if restaurant.rating > 0 %}
+                        <span class="r-rate"><i class="fas fa-star"></i> {{ restaurant.rating }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                    <form action="{{ url_for('upload_restaurant_image', restaurant_id=restaurant.id) }}"
+                          method="POST" enctype="multipart/form-data" class="r-admin">
+                        <input type="file" name="image" accept="image/*"
+                               class="form-control form-control-sm" onchange="this.form.submit()">
                     </form>
-                </div>
-                {% endif %}
+                    {% endif %}
 
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                             <h5 class="mb-1">
-                                <a href="{{ url_for('restaurant_profile', restaurant_id=restaurant.id) }}"
-                                         class="text-decoration-none text-dark">
-                                         {{ restaurant.name_ar }}
-                                 </a>
-                             </h5>
-                            {% if restaurant.name != restaurant.name_ar %}
-                            <small class="text-muted">{{ restaurant.name }}</small>
+                    <div class="r-body">
+                        <h5>
+                            <a href="{{ url_for('restaurant_profile', restaurant_id=restaurant.id) }}">
+                                {{ restaurant.name_ar }}
+                            </a>
+                        </h5>
+                        {% if restaurant.name != restaurant.name_ar %}
+                        <span class="r-latin">{{ restaurant.name }}</span>
+                        {% endif %}
+
+                        {% if restaurant.description_ar %}
+                        <p class="r-desc">{{ restaurant.description_ar[:75] }}{% if restaurant.description_ar|length > 75 %}...{% endif %}</p>
+                        {% endif %}
+
+                        <div class="r-meta">
+                            <span><i class="fas fa-location-dot"></i>
+                                {{ restaurant.wilaya }}{% if restaurant.commune %} · {{ restaurant.commune }}{% endif %}
+                            </span>
+                            <span><i class="fas fa-phone"></i> {{ restaurant.phone }}</span>
+                        </div>
+
+                        <div class="r-foot">
+                            <span class="r-chip">
+                                <i class="fas fa-bowl-food"></i>
+                                {{ restaurant.menu_items.filter_by(is_available=True).count() }} وجبة
+                            </span>
+                            {% if current_user.is_authenticated and current_user.role == 'customer' %}
+                                {% if restaurant.is_open %}
+                                <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-order">
+                                    اطلب الآن <i class="fas fa-arrow-left"></i>
+                                </a>
+                                {% else %}
+                                <button class="btn btn-order disabled" disabled>مغلق</button>
+                                {% endif %}
+                            {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-order outline">
+                                أدخل وأطلب <i class="fas fa-arrow-left"></i>
+                            </a>
                             {% endif %}
                         </div>
-                        {% if restaurant.is_open %}
-                        <span class="badge bg-success">
-                            <i class="fas fa-check-circle"></i> مفتوح
-                        </span>
-                        {% else %}
-                        <span class="badge bg-danger">
-                            <i class="fas fa-times-circle"></i> مغلق
-                        </span>
-                        {% endif %}
                     </div>
-                    
-                    {% if restaurant.description_ar %}
-                    <p class="text-muted small mb-3">
-                        <i class="fas fa-info-circle"></i> {{ restaurant.description_ar[:80] }}
-                        {% if restaurant.description_ar|length > 80 %}...{% endif %}
-                    </p>
-                    {% endif %}
-                    
-                    <div class="mb-2">
-                        <small class="text-muted">
-                            <i class="fas fa-map-marker-alt text-danger"></i> 
-                            {{ restaurant.wilaya }}{% if restaurant.commune %}, {{ restaurant.commune }}{% endif %}
-                        </small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted">
-                            <i class="fas fa-phone text-primary"></i> {{ restaurant.phone }}
-                        </small>
-                    </div>
-                    
-                    {% if restaurant.rating > 0 %}
-                    <div class="mb-3">
-                        <i class="fas fa-star text-warning"></i>
-                        <strong>{{ restaurant.rating }}</strong>
-                        <small class="text-muted">({{ restaurant.orders.count() }} طلبية)</small>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Menu Items Count -->
-                    <div class="mb-3">
-                        <small class="badge bg-light text-dark">
-                            <i class="fas fa-utensils"></i> 
-                            {{ restaurant.menu_items.filter_by(is_available=True).count() }} وجبة متاحة
-                        </small>
-                    </div>
-                    
-                    {% if current_user.is_authenticated and current_user.role == 'customer' %}
-                        {% if restaurant.is_open %}
-                        <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" 
-                           class="btn btn-primary w-100">
-                            <i class="fas fa-shopping-cart"></i> اطلب الآن
-                        </a>
-                        {% else %}
-                        <button class="btn btn-secondary w-100" disabled>
-                            <i class="fas fa-times"></i> المطعم مغلق
-                        </button>
-                        {% endif %}
-                    {% else %}
-                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary w-100">
-                        <i class="fas fa-sign-in-alt"></i> أدخل وأطلب 
-                    </a>
-                    {% endif %}
                 </div>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="col-12">
-            <div class="alert alert-info text-center py-5">
-                <i class="fas fa-info-circle fa-3x mb-3 d-block"></i>
-                <h4>لاتوجد مطاعم </h4>
-                <p class="mb-3">انتظر قليلا، المطاعم القريبة!</p>
-                {% if current_user.is_authenticated and current_user.role == 'admin' %}
-                <a href="{{ url_for('register') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> اضف مطعم
-                </a>
-                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-store-slash"></i>
+                    <h4>ما كاينش مطاعم دروك</h4>
+                    <p>راهم جايين قريب. إذا عندك مطعم، سجّله وكن من الأوائل.</p>
+                    <a href="{{ url_for('restaurant_register') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> سجّل مطعمك
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="empty-state" id="noResults" style="display:none;">
+        <i class="fas fa-magnifying-glass"></i>
+        <h4>ما لقينا حتى مطعم</h4>
+        <p>جرّب اسم آخر ولا نقّص من الفلاتر.</p>
+    </div>
+</section>
+
+<!-- ═══════════ انضم إلينا ═══════════ -->
+{% if not current_user.is_authenticated or current_user.role == 'customer' %}
+<section class="join">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="join-card jc-green">
+                <i class="fas fa-utensils"></i>
+                <h4>عندك مطعم؟</h4>
+                <p>سجّل مطعمك مجاناً، بني قائمتك، واستقبل طلبيات من زبائن قريبين منك.</p>
+                <a href="{{ url_for('restaurant_register') }}" class="btn btn-join">سجّل مطعمك</a>
             </div>
         </div>
-    {% endif %}
-</div>
-
-<!-- Call to Action -->
-{% if not current_user.is_authenticated %}
-<div class="row mt-5">
-    <div class="col-12">
-        <div class="card bg-primary text-white text-center">
-            <div class="card-body py-5">
-                <h3 class="mb-3">جاهز للبدأ؟</h3>
-                <p class="lead mb-4">سجل الآن وأطلب واش تحب تاكل</p>
-                <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
-                    <i class="fas fa-rocket"></i> سجل مجانا
-                </a>
+        <div class="col-md-6">
+            <div class="join-card jc-dark">
+                <i class="fas fa-motorcycle"></i>
+                <h4>عندك موتور؟</h4>
+                <p>خدم معانا سائق، اقبل الطلبيات لي تناسبك، واربح 200 د.ج على كل توصيلة.</p>
+                <a href="{{ url_for('register') }}" class="btn btn-join">خدم معانا</a>
             </div>
         </div>
     </div>
-</div>
+</section>
 {% endif %}
+
+<!-- ═══════════ الدليل ═══════════ -->
+<section class="guide-cta">
+    <div>
+        <h4><i class="fas fa-book-open"></i> ما فهمتش كيفاش تخدم المنصة؟</h4>
+        <p>أدلة قصيرة وعملية للزبون، صاحب المطعم، والسائق — تقراها ولا تحمّلها PDF.</p>
+    </div>
+    <a href="{{ url_for('guide') }}" class="btn btn-guide">شوف الأدلة <i class="fas fa-arrow-left"></i></a>
+</section>
+
 {% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+    const search  = document.getElementById('searchInput');
+    const wilaya  = document.getElementById('wilayaFilter');
+    const openOnly= document.getElementById('openOnly');
+    const items   = Array.from(document.querySelectorAll('.r-item'));
+    const noRes   = document.getElementById('noResults');
+    const count   = document.getElementById('resultCount');
+    if (!items.length || !search) return;
+
+    function apply() {
+        const q = search.value.trim().toLowerCase();
+        const w = wilaya.value;
+        const o = openOnly.checked;
+        let shown = 0;
+        items.forEach(function (el) {
+            const okName   = !q || el.dataset.name.toLowerCase().includes(q);
+            const okWilaya = !w || el.dataset.wilaya === w;
+            const okOpen   = !o || el.dataset.open === '1';
+            const ok = okName && okWilaya && okOpen;
+            el.style.display = ok ? '' : 'none';
+            if (ok) shown++;
+        });
+        noRes.style.display = shown ? 'none' : '';
+        count.textContent = shown === items.length
+            ? '' : 'يبان ' + shown + ' من ' + items.length + ' مطعم';
+    }
+    [search, wilaya, openOnly].forEach(function (el) {
+        el.addEventListener('input', apply);
+        el.addEventListener('change', apply);
+    });
+})();
+</script>
+{% endblock %}
+
 
 {% block extra_css %}
 <style>
-    .restaurant-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        overflow: hidden;
-    }
-    .restaurant-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    }
-    .restaurant-card .card-img-top {
-        transition: transform 0.3s ease;
-    }
-    .restaurant-card:hover .card-img-top {
-        transform: scale(1.05);
-    }
+/* ───────── HERO ───────── */
+.hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #005c2e 0%, #00913f 100%);
+    border-radius: 26px; padding: 54px 44px; margin-bottom: 52px; color: #fff;
+}
+.hero-bg {
+    position: absolute; inset: 0; opacity: .11;
+    background-image: radial-gradient(circle at 18% 22%, #fff 2px, transparent 2.5px);
+    background-size: 34px 34px;
+}
+.hero-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,.17); border-radius: 999px;
+    padding: 6px 16px; font-size: .84rem; font-weight: 600; margin-bottom: 20px;
+}
+.hero-title { font-size: 2.85rem; font-weight: 800; line-height: 1.32; margin-bottom: 16px; }
+.hero-title span { color: #ffd66b; }
+.hero-sub { font-size: 1.06rem; color: rgba(255,255,255,.9); line-height: 1.95; max-width: 520px; margin-bottom: 28px; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 34px; }
+.btn-hero-main {
+    background: #fff; color: #00602f; font-weight: 700; border-radius: 13px;
+    padding: 13px 28px; border: 0;
+}
+.btn-hero-main:hover { background: #f0f7f3; color: #004d26; }
+.btn-hero-ghost {
+    background: rgba(255,255,255,.14); color: #fff; font-weight: 600;
+    border: 1px solid rgba(255,255,255,.34); border-radius: 13px; padding: 13px 26px;
+}
+.btn-hero-ghost:hover { background: rgba(255,255,255,.24); color: #fff; }
+.hero-stats { display: flex; gap: 38px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.2); }
+.hero-stats div { display: flex; flex-direction: column; }
+.hero-stats strong { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.hero-stats span { font-size: .84rem; color: rgba(255,255,255,.72); }
+.hero-logo { max-width: 300px; width: 100%; filter: drop-shadow(0 14px 32px rgba(0,0,0,.28)); }
+
+/* ───────── كيفاش تخدم ───────── */
+.how { margin-bottom: 56px; }
+.how-card {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 18px;
+    padding: 30px 24px; height: 100%; position: relative; transition: .25s;
+}
+.how-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,60,30,.09); }
+.how-num {
+    position: absolute; top: 22px; left: 24px; font-size: 2.6rem;
+    font-weight: 800; color: #eef4f0; line-height: 1;
+}
+.how-ico { font-size: 1.7rem; color: #006633; margin-bottom: 16px; display: block; }
+.how-card h5 { font-weight: 700; color: #12201a; margin-bottom: 8px; }
+.how-card p { color: #5d6f67; font-size: .93rem; margin: 0; line-height: 1.85; }
+
+/* ───────── عنوان القسم ───────── */
+.sec-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 22px; }
+.sec-head h2 { font-weight: 800; color: #12201a; margin: 0 0 4px; font-size: 1.65rem; }
+.sec-head p { color: #7b8c84; margin: 0; font-size: .92rem; }
+
+/* ───────── الفلاتر ───────── */
+.filter-bar {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    background: #fff; border: 1px solid #e6ede9; border-radius: 16px;
+    padding: 13px 16px; margin-bottom: 10px;
+}
+.fb-search { position: relative; flex: 1 1 250px; }
+.fb-search i { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #9aaaa3; font-size: .9rem; }
+.fb-search input {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 11px;
+    padding: 10px 40px 10px 14px; font-family: inherit; font-size: .93rem; background: #fafcfb;
+}
+.fb-search input:focus { outline: none; border-color: #006633; background: #fff; }
+.fb-select {
+    border: 1px solid #e2eae6; border-radius: 11px; padding: 10px 14px;
+    font-family: inherit; font-size: .93rem; background: #fafcfb; color: #33443c; min-width: 160px;
+}
+.fb-select:focus { outline: none; border-color: #006633; }
+.fb-toggle { display: flex; align-items: center; gap: 7px; font-size: .92rem; color: #33443c; cursor: pointer; margin: 0; }
+.fb-toggle input { width: 17px; height: 17px; accent-color: #006633; cursor: pointer; }
+.fb-count { color: #7b8c84; font-size: .87rem; margin: 0 4px 18px; min-height: 20px; }
+
+/* ───────── بطاقة مطعم ───────── */
+.r-card {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 18px; overflow: hidden;
+    height: 100%; display: flex; flex-direction: column; transition: transform .25s, box-shadow .25s;
+}
+.r-card:hover { transform: translateY(-6px); box-shadow: 0 16px 36px rgba(0,60,30,.12); }
+.r-media { position: relative; height: 178px; overflow: hidden; }
+.r-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+.r-card:hover .r-media img { transform: scale(1.06); }
+.r-media-fb {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #006633 0%, #004d26 100%);
+    color: rgba(255,255,255,.5); font-size: 2.6rem;
+}
+.r-badge {
+    position: absolute; top: 12px; right: 12px; border-radius: 999px;
+    padding: 5px 12px; font-size: .76rem; font-weight: 700; color: #fff;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.r-badge i { font-size: .45rem; }
+.r-badge.open { background: rgba(0,145,63,.95); }
+.r-badge.closed { background: rgba(90,100,95,.92); }
+.r-rate {
+    position: absolute; bottom: 12px; right: 12px; background: rgba(255,255,255,.95);
+    color: #12201a; border-radius: 9px; padding: 4px 10px; font-size: .8rem; font-weight: 700;
+}
+.r-rate i { color: #f5a623; }
+.r-admin { padding: 10px 14px 0; }
+.r-body { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
+.r-body h5 { margin: 0 0 2px; font-size: 1.1rem; font-weight: 700; }
+.r-body h5 a { color: #12201a; text-decoration: none; }
+.r-body h5 a:hover { color: #006633; }
+.r-latin { color: #9aaaa3; font-size: .8rem; display: block; margin-bottom: 10px; }
+.r-desc { color: #5d6f67; font-size: .89rem; line-height: 1.8; margin: 8px 0 14px; }
+.r-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.r-meta span { color: #7b8c84; font-size: .83rem; }
+.r-meta i { color: #4fae7a; width: 16px; }
+.r-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.r-chip {
+    background: #f1f6f3; color: #33443c; border-radius: 9px;
+    padding: 6px 11px; font-size: .8rem; font-weight: 600; white-space: nowrap;
+}
+.r-chip i { color: #006633; }
+.btn-order {
+    background: #006633; color: #fff; border-radius: 11px; padding: 9px 17px;
+    font-size: .88rem; font-weight: 700; border: 0; white-space: nowrap;
+}
+.btn-order:hover { background: #004d26; color: #fff; }
+.btn-order.outline { background: #fff; color: #006633; border: 1.5px solid #006633; }
+.btn-order.outline:hover { background: #006633; color: #fff; }
+.btn-order.disabled { background: #e9eeeb; color: #9aaaa3; }
+
+/* ───────── حالة فارغة ───────── */
+.empty-state {
+    background: #fff; border: 1px dashed #d5e2db; border-radius: 18px;
+    padding: 52px 24px; text-align: center;
+}
+.empty-state i { font-size: 2.6rem; color: #c3d3ca; margin-bottom: 16px; display: block; }
+.empty-state h4 { font-weight: 700; color: #33443c; margin-bottom: 8px; }
+.empty-state p { color: #7b8c84; margin-bottom: 20px; }
+
+/* ───────── انضم إلينا ───────── */
+.join { margin: 58px 0; }
+.join-card { border-radius: 20px; padding: 34px 30px; height: 100%; color: #fff; }
+.join-card i { font-size: 1.9rem; margin-bottom: 16px; display: block; opacity: .9; }
+.join-card h4 { font-weight: 800; margin-bottom: 10px; }
+.join-card p { font-size: .94rem; line-height: 1.9; margin-bottom: 22px; opacity: .9; }
+.jc-green { background: linear-gradient(135deg, #006633 0%, #00913f 100%); }
+.jc-dark  { background: linear-gradient(135deg, #1b2d24 0%, #2c4638 100%); }
+.btn-join { background: #fff; color: #12201a; font-weight: 700; border-radius: 11px; padding: 11px 26px; }
+.btn-join:hover { background: #f0f7f3; color: #12201a; }
+
+/* ───────── دعوة الدليل ───────── */
+.guide-cta {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 18px;
+    padding: 28px 32px; display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.guide-cta h4 { font-weight: 700; color: #12201a; margin-bottom: 6px; font-size: 1.14rem; }
+.guide-cta h4 i { color: #006633; margin-left: 6px; }
+.guide-cta p { color: #7b8c84; margin: 0; font-size: .92rem; }
+.btn-guide {
+    background: #12201a; color: #fff; border-radius: 11px; padding: 12px 24px; font-weight: 700; white-space: nowrap;
+}
+.btn-guide:hover { background: #006633; color: #fff; }
+
+/* ───────── الهاتف ───────── */
+@media (max-width: 991px) {
+    .hero { padding: 38px 24px; border-radius: 20px; }
+    .hero-title { font-size: 2.1rem; }
+    .hero-sub { font-size: .98rem; }
+    .hero-stats { gap: 26px; }
+    .hero-stats strong { font-size: 1.32rem; }
+    .guide-cta { padding: 24px 22px; }
+}
 </style>
 {% endblock %}

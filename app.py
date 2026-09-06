@@ -412,7 +412,11 @@ def index():
         elif current_user.role == 'admin':
             #return redirect(url_for('admin_dashboard'))
             return redirect(url_for('admin_grand_dashboard')) 
-    restaurants = Restaurant.query.filter_by(is_open=True).all()
+    # نعرضو الكل — المفتوحة الأولى ثم حسب التقييم — والزبون يفلتر بنفسه
+    restaurants = Restaurant.query.order_by(
+        Restaurant.is_open.desc(),
+        Restaurant.rating.desc()
+    ).all()
     return render_template('index.html', restaurants=restaurants)
 
 # ============================================
@@ -1580,6 +1584,29 @@ def pwa_manifest():
     response = send_from_directory('static', 'manifest.json')
     response.headers['Content-Type'] = 'application/manifest+json; charset=utf-8'
     return response
+
+
+@app.route('/guide')
+def guide():
+    """صفحة أدلة الاستعمال (PDF لكل دور)"""
+    return render_template('guide.html')
+
+
+@app.route('/guide/<role>')
+def guide_download(role):
+    """تحميل دليل دور معيّن"""
+    files = {
+        'customer':   'دليل-الزبون.pdf',
+        'restaurant': 'دليل-صاحب-المطعم.pdf',
+        'driver':     'دليل-السائق.pdf',
+    }
+    if role not in files:
+        return redirect(url_for('guide'))
+    return send_from_directory(
+        os.path.join(current_dir, 'static', 'docs'),
+        files[role],
+        as_attachment=False
+    )
 
 
 @app.route('/offline')
