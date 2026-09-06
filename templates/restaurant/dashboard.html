@@ -12,9 +12,19 @@
                          style="width: 80px; height: 80px; font-size: 36px;">
                         <i class="fas fa-utensils"></i>
                     </div>
-                    <div class="ms-3">
+                    <div class="ms-3 flex-grow-1">
                         <h2 class="mb-1">{{ restaurant.name_ar }}</h2>
                         <p class="mb-0"><i class="fas fa-map-marker-alt"></i> {{ restaurant.address }}</p>
+                    </div>
+                    <div class="open-switch">
+                        <div class="os-state" id="osState">
+                            {% if restaurant.is_open %}مفتوح ويستقبل الطلبات{% else %}مغلق — لا تصلك طلبات{% endif %}
+                        </div>
+                        <button type="button" id="openToggle"
+                                class="os-btn {{ 'on' if restaurant.is_open else 'off' }}"
+                                onclick="toggleOpen()">
+                            <span class="os-knob"></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -51,6 +61,22 @@
 </div>
 
 <style>
+.open-switch { text-align: center; flex-shrink: 0; }
+.os-state { font-size: .82rem; font-weight: 600; margin-bottom: 7px; opacity: .95; }
+.os-btn {
+    width: 62px; height: 32px; border-radius: 99px; border: 0; cursor: pointer;
+    position: relative; transition: background .22s; padding: 0;
+    background: rgba(255,255,255,.35);
+}
+.os-btn.on { background: #00c46a; }
+.os-btn.off { background: rgba(0,0,0,.28); }
+.os-knob {
+    position: absolute; top: 4px; width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; transition: inset-inline-start .22s; inset-inline-start: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.22);
+}
+.os-btn.on .os-knob { inset-inline-start: 34px; }
+
 .rest-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .ra-btn {
     display: flex; align-items: center; gap: 13px; text-decoration: none;
@@ -345,6 +371,24 @@ function rejectOrder(orderId) {
             }
         });
     }
+}
+
+function toggleOpen() {
+    const btn = document.getElementById('openToggle');
+    btn.disabled = true;
+    fetch('/restaurant/toggle-open', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                btn.classList.toggle('on', d.is_open);
+                btn.classList.toggle('off', !d.is_open);
+                document.getElementById('osState').textContent =
+                    d.is_open ? 'مفتوح ويستقبل الطلبات' : 'مغلق — لا تصلك طلبات';
+                if (typeof showToast === 'function') showToast('حالة المطعم', d.message);
+            } else { alert(d.error || 'تعذّر التغيير'); }
+        })
+        .catch(() => alert('تعذّر الاتصال بالخادم'))
+        .finally(() => { btn.disabled = false; });
 }
 
 function cancelOrder(orderId) {

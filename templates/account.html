@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}حسابي - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="ac-wrap">
+    <div class="ac-head">
+        <div class="ac-avatar">{{ current_user.username[0] if current_user.username else '?' }}</div>
+        <div>
+            <h1>{{ current_user.username }}</h1>
+            <p>
+                {% if current_user.role == 'customer' %}زبون
+                {% elif current_user.role == 'driver' %}سائق
+                {% elif current_user.role == 'restaurant' %}صاحب مطعم
+                {% else %}مشرف{% endif %}
+                · عضو منذ {{ current_user.created_at.strftime('%Y-%m-%d') if current_user.created_at else '—' }}
+            </p>
+        </div>
+        <div class="ac-side">
+            {% if current_user.role == 'customer' %}
+            <b>{{ orders_count }}</b><span>طلب</span>
+            {% elif current_user.role == 'driver' %}
+            <b>{{ (wallet.total_earned if wallet else 0)|round|int }}</b><span>د.ج أرباح</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {# ═══ البيانات ═══ #}
+        <div class="col-lg-7">
+            <form method="POST" class="ac-card">
+                <input type="hidden" name="action" value="profile">
+                <h2>بياناتي</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label>الاسم</label>
+                        <input type="text" name="username" value="{{ current_user.username }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>رقم الهاتف</label>
+                        <input type="tel" name="phone" value="{{ current_user.phone }}" dir="ltr" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" value="{{ current_user.email }}" dir="ltr" disabled>
+                        <small>لا يمكن تغييره</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label>الولاية</label>
+                        <select name="wilaya">
+                            <option value="">— اختر —</option>
+                            {% for code, name in WILAYAS %}
+                            <option value="{{ name }}" {% if current_user.wilaya == name %}selected{% endif %}>{{ code }} - {{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label>البلدية</label>
+                        <input type="text" name="commune" value="{{ current_user.commune or '' }}">
+                    </div>
+                </div>
+
+                {% if current_user.role == 'customer' %}
+                <h2 class="mt-4">عنوان التوصيل المحفوظ</h2>
+                <p class="ac-hint">يُملأ تلقائياً عند كل طلب — تستطيع تعديله قبل التأكيد.</p>
+                <label>العنوان بالتفصيل</label>
+                <textarea name="default_address" rows="3"
+                          placeholder="الحي، الشارع، رقم العمارة، الطابق، وأي علامة تسهّل على السائق">{{ current_user.default_address or '' }}</textarea>
+                {% endif %}
+
+                <button type="submit" class="btn-save"><i class="fas fa-floppy-disk"></i> حفظ البيانات</button>
+            </form>
+        </div>
+
+        {# ═══ كلمة السر ═══ #}
+        <div class="col-lg-5">
+            <form method="POST" class="ac-card">
+                <input type="hidden" name="action" value="password">
+                <h2>كلمة السر</h2>
+                <p class="ac-hint">ستة أحرف على الأقل.</p>
+
+                <label>كلمة السر الحالية</label>
+                <input type="password" name="old_password" required autocomplete="current-password">
+
+                <label>كلمة السر الجديدة</label>
+                <input type="password" name="new_password" required minlength="6" autocomplete="new-password">
+
+                <label>تأكيد كلمة السر الجديدة</label>
+                <input type="password" name="confirm_password" required minlength="6" autocomplete="new-password">
+
+                <button type="submit" class="btn-save alt"><i class="fas fa-key"></i> تغيير كلمة السر</button>
+            </form>
+
+            <div class="ac-links">
+                {% if current_user.role == 'customer' %}
+                <a href="{{ url_for('my_orders') }}"><i class="fas fa-bag-shopping"></i> طلباتي</a>
+                {% elif current_user.role == 'restaurant' %}
+                <a href="{{ url_for('restaurant_reports') }}"><i class="fas fa-chart-column"></i> أرباحي</a>
+                {% elif current_user.role == 'driver' %}
+                <a href="{{ url_for('driver_dashboard') }}"><i class="fas fa-motorcycle"></i> لوحتي</a>
+                {% endif %}
+                <a href="{{ url_for('guide') }}"><i class="fas fa-circle-question"></i> دليل الاستعمال</a>
+                <a href="{{ url_for('logout') }}" class="out"><i class="fas fa-arrow-right-from-bracket"></i> تسجيل الخروج</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.ac-wrap { max-width: 940px; margin: 0 auto; }
+.ac-head {
+    background: linear-gradient(135deg, #006633 0%, #00913f 100%); color: #fff;
+    border-radius: 20px; padding: 26px 30px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.ac-avatar {
+    width: 62px; height: 62px; border-radius: 50%; background: rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center; font-size: 1.7rem; font-weight: 800;
+    flex-shrink: 0;
+}
+.ac-head h1 { font-weight: 800; font-size: 1.5rem; margin: 0 0 3px; }
+.ac-head p { margin: 0; color: rgba(255,255,255,.8); font-size: .88rem; }
+.ac-side { margin-inline-start: auto; text-align: center; }
+.ac-side b { display: block; font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
+.ac-side span { font-size: .78rem; color: rgba(255,255,255,.75); }
+
+.ac-card { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px; margin-bottom: 18px; }
+.ac-card h2 { font-weight: 800; font-size: 1.14rem; color: #12201a; margin: 0 0 4px; }
+.ac-hint { color: #7b8c84; font-size: .86rem; margin: 0 0 14px; }
+.ac-card label { display: block; font-size: .84rem; color: #55665e; font-weight: 600; margin: 12px 0 5px; }
+.ac-card input, .ac-card select, .ac-card textarea {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 10px; padding: 10px 13px;
+    font-family: inherit; font-size: .95rem; background: #fafcfb; color: #12201a;
+}
+.ac-card input:focus, .ac-card select:focus, .ac-card textarea:focus {
+    outline: none; border-color: #006633; background: #fff;
+}
+.ac-card input:disabled { background: #f1f4f2; color: #9aaaa3; }
+.ac-card small { color: #9aaaa3; font-size: .76rem; }
+.ac-card textarea { resize: vertical; }
+.btn-save {
+    margin-top: 20px; background: #006633; color: #fff; border: 0; border-radius: 11px;
+    padding: 12px 28px; font-family: inherit; font-weight: 700; cursor: pointer;
+}
+.btn-save:hover { background: #004d26; }
+.btn-save.alt { background: #12201a; }
+.btn-save.alt:hover { background: #000; }
+
+.ac-links { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; overflow: hidden; }
+.ac-links a {
+    display: flex; align-items: center; gap: 11px; padding: 14px 20px;
+    color: #33443c; text-decoration: none; font-size: .93rem; font-weight: 600;
+    border-bottom: 1px solid #f1f5f3;
+}
+.ac-links a:last-child { border-bottom: 0; }
+.ac-links a:hover { background: #f6faf8; color: #006633; }
+.ac-links i { color: #4fae7a; width: 18px; }
+.ac-links a.out { color: #b3121b; }
+.ac-links a.out i { color: #b3121b; }
+.ac-links a.out:hover { background: #fdf2f3; color: #b3121b; }
+</style>
+{% endblock %}

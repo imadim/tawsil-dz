@@ -42,6 +42,7 @@ class User(UserMixin, db.Model):
     
     # Wilaya (State in Algeria)
     wilaya = db.Column(db.String(50))
+    default_address = db.Column(db.String(300))
     commune = db.Column(db.String(50))
 
     def set_password(self, password):

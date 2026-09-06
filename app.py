@@ -326,6 +326,7 @@ def ensure_schema():
                 ('orders',     'cancel_reason', 'VARCHAR(200)', 'NULL'),
                 ('users',      'rating',        'FLOAT',        '0'),
                 ('users',      'total_reviews', 'INTEGER',      '0'),
+                ('users',      'default_address', 'VARCHAR(300)', 'NULL'),
                 ('restaurants','total_reviews', 'INTEGER',      '0'),
             ]:
                 if table in insp.get_table_names():
@@ -1111,7 +1112,9 @@ def customer_dashboard():
     if current_user.role != 'customer':
         return redirect(url_for('index'))
     
-    restaurants = Restaurant.query.filter_by(is_open=True).all()
+    restaurants = Restaurant.query.order_by(
+        Restaurant.is_open.desc(), Restaurant.rating.desc()
+    ).all()
     orders = Order.query.filter_by(customer_id=current_user.id).order_by(Order.created_at.desc()).all()
     
     return render_template('customer/dashboard.html', restaurants=restaurants, orders=orders)
@@ -1245,6 +1248,92 @@ def restaurant_orders():
                                'delivered': Order.query.filter_by(restaurant_id=rest.id, status='delivered').count(),
                                'cancelled': Order.query.filter_by(restaurant_id=rest.id, status='cancelled').count(),
                            })
+
+
+@app.route('/restaurant/toggle-open', methods=['POST'])
+@login_required
+def restaurant_toggle_open():
+    """صاحب المطعم يفتح مطعمه أو يغلقه بنفسه"""
+    if current_user.role != 'restaurant':
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest:
+        return jsonify({'error': 'لا يوجد مطعم مرتبط بحسابك'}), 404
+
+    rest.is_open = not rest.is_open
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'is_open': rest.is_open,
+        'message': 'مطعمك مفتوح الآن ويستقبل الطلبات' if rest.is_open
+                   else 'أُغلق مطعمك — لن تصلك طلبات جديدة'
+    })
+
+
+@app.route('/restaurant/menu/toggle/<int:item_id>', methods=['POST'])
+@login_required
+def toggle_menu_item(item_id):
+    """تعطيل طبق مؤقتاً عند نفاده، أو إعادته للقائمة"""
+    if current_user.role != 'restaurant':
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
+    item = MenuItem.query.get_or_404(item_id)
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest or item.restaurant_id != rest.id:
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
+
+    item.is_available = not item.is_available
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'is_available': item.is_available,
+        'message': f'«{item.name_ar}» متاح الآن' if item.is_available
+                   else f'«{item.name_ar}» أصبح غير متاح مؤقتاً'
+    })
+
+
+@app.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    """صفحة الحساب: البيانات الشخصية، العنوان المحفوظ، وكلمة السر"""
+    if request.method == 'POST':
+        action = request.form.get('action', 'profile')
+
+        if action == 'password':
+            old = request.form.get('old_password', '')
+            new = request.form.get('new_password', '')
+            confirm = request.form.get('confirm_password', '')
+            if not current_user.check_password(old):
+                flash('كلمة السر الحالية غير صحيحة', 'danger')
+            elif len(new) < 6:
+                flash('كلمة السر الجديدة قصيرة — ستة أحرف على الأقل', 'warning')
+            elif new != confirm:
+                flash('كلمتا السر غير متطابقتين', 'warning')
+            else:
+                current_user.set_password(new)
+                db.session.commit()
+                flash('تم تغيير كلمة السر', 'success')
+            return redirect(url_for('account'))
+
+        username = (request.form.get('username') or '').strip()
+        phone    = (request.form.get('phone') or '').strip()
+        if username:
+            clash = User.query.filter(User.username == username, User.id != current_user.id).first()
+            if clash:
+                flash('اسم المستخدم محجوز — اختر غيره', 'warning')
+                return redirect(url_for('account'))
+            current_user.username = username
+        if phone:
+            current_user.phone = phone
+        current_user.wilaya  = (request.form.get('wilaya') or '').strip() or current_user.wilaya
+        current_user.commune = (request.form.get('commune') or '').strip() or current_user.commune
+        current_user.default_address = (request.form.get('default_address') or '').strip()[:300]
+        db.session.commit()
+        flash('حُفظت بياناتك', 'success')
+        return redirect(url_for('account'))
+
+    wallet = Wallet.query.filter_by(user_id=current_user.id).first() if current_user.role == 'driver' else None
+    orders_count = Order.query.filter_by(customer_id=current_user.id).count() if current_user.role == 'customer' else 0
+    return render_template('account.html', wallet=wallet, orders_count=orders_count)
 
 
 @app.route('/restaurant/reports')

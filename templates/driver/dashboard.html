@@ -136,7 +136,8 @@
                         <div class="alert alert-light mb-3">
                             <p class="mb-1"><i class="fas fa-store text-danger"></i> <strong>المطعم:</strong></p>
                             <p class="mb-1">{{ order.restaurant.name_ar }}</p>
-                            <p class="mb-0"><i class="fas fa-map-marker-alt text-danger"></i> {{ order.restaurant.address }}</p>
+                            <p class="mb-0"><i class="fas fa-map-marker-alt text-danger"></i> {{ order.restaurant.address }}<br>
+                            <i class="fas fa-phone text-success"></i> <a href="tel:{{ order.restaurant.phone }}" dir="ltr">{{ order.restaurant.phone }}</a></p>
                         </div>
                         
                         <div class="alert alert-light mb-3">
@@ -204,7 +205,8 @@
                             <div class="mb-3">
                                 <p class="mb-1"><i class="fas fa-store text-danger"></i> <strong>استلمها من:</strong></p>
                                 <p class="mb-0">{{ order.restaurant.name_ar }}</p>
-                                <small class="text-muted">{{ order.restaurant.address }}</small>
+                                <small class="text-muted">{{ order.restaurant.address }}<br>
+                            <i class="fas fa-phone text-success"></i> <a href="tel:{{ order.restaurant.phone }}" dir="ltr">{{ order.restaurant.phone }}</a></small>
                             </div>
                             
                             <div class="mb-3">

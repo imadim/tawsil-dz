@@ -134,12 +134,39 @@
 </div>
 {% endif %}
 
-<h4 class="mb-3"><i class="fas fa-utensils"></i> المطاعم المتاحة</h4>
-<div class="row">
+<h4 class="mb-3"><i class="fas fa-utensils"></i> المطاعم</h4>
+
+<div class="cf-bar">
+    <div class="cf-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="cSearch" placeholder="ابحث عن مطعم بالاسم...">
+    </div>
+    <select id="cWilaya" class="cf-sel">
+        <option value="">كل الولايات</option>
+        {% for w in restaurants|map(attribute='wilaya')|unique|sort %}
+        <option value="{{ w }}">{{ w }}</option>
+        {% endfor %}
+    </select>
+    <select id="cCuisine" class="cf-sel">
+        <option value="">كل التصنيفات</option>
+        {% for c in CUISINES %}
+        <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+    </select>
+    <label class="cf-tog"><input type="checkbox" id="cOpen" checked> <span>المفتوحة فقط</span></label>
+    <button type="button" id="cReset" class="cf-reset" hidden><i class="fas fa-xmark"></i> إزالة</button>
+</div>
+<p class="cf-count" id="cCount"></p>
+
+<div class="row" id="cGrid">
     {% if restaurants %}
         {% for restaurant in restaurants %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 shadow-sm">
+        <div class="col-md-6 col-lg-4 mb-4 c-item"
+             data-name="{{ restaurant.name_ar }} {{ restaurant.name }}"
+             data-wilaya="{{ restaurant.wilaya }}"
+             data-cuisine="{{ restaurant.cuisine or 'أخرى' }}"
+             data-open="{{ '1' if restaurant.is_open else '0' }}">
+            <div class="card h-100 shadow-sm {{ '' if restaurant.is_open else 'closed-card' }}">
                 <div class="card-body">
                     <!-- replace this block in customer dashboard restaurants loop -->
                      <div class="d-flex align-items-center mb-3">
@@ -158,7 +185,14 @@
     
                         <div class="ms-3">
                             <h5 class="mb-0">{{ restaurant.name_ar }}</h5>
+                            {% if restaurant.is_open %}
                             <small class="text-success"><i class="fas fa-check-circle"></i> مفتوح</small>
+                            {% else %}
+                            <small class="text-secondary"><i class="fas fa-circle-xmark"></i> مغلق الآن</small>
+                            {% endif %}
+                            {% if restaurant.cuisine %}
+                            <small class="d-block text-muted">{{ restaurant.cuisine }}</small>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -188,8 +222,43 @@
 </div>
 {% endblock %}
 
+<div class="cf-none" id="cNone" style="display:none;">
+    <i class="fas fa-magnifying-glass"></i>
+    <b>لم نعثر على مطعم مطابق</b>
+    <p>جرّب اسماً آخر أو أزِل بعض الفلاتر.</p>
+</div>
+
 {% block extra_js %}
 <script>
+(function () {
+    const q = document.getElementById('cSearch'), w = document.getElementById('cWilaya'),
+          cu = document.getElementById('cCuisine'), op = document.getElementById('cOpen'),
+          rs = document.getElementById('cReset'), cnt = document.getElementById('cCount'),
+          none = document.getElementById('cNone');
+    const items = Array.from(document.querySelectorAll('.c-item'));
+    if (!items.length || !q) return;
+
+    function apply() {
+        const t = q.value.trim().toLowerCase();
+        let shown = 0;
+        items.forEach(el => {
+            const ok = (!t || el.dataset.name.toLowerCase().includes(t))
+                    && (!w.value || el.dataset.wilaya === w.value)
+                    && (!cu.value || el.dataset.cuisine === cu.value)
+                    && (!op.checked || el.dataset.open === '1');
+            el.style.display = ok ? '' : 'none';
+            if (ok) shown++;
+        });
+        const filtering = !!(t || w.value || cu.value) || !op.checked;
+        none.style.display = shown ? 'none' : '';
+        rs.hidden = !filtering;
+        cnt.textContent = shown === items.length ? '' : `يظهر ${shown} من ${items.length} مطعم`;
+    }
+    [q, w, cu, op].forEach(el => { el.addEventListener('input', apply); el.addEventListener('change', apply); });
+    rs.addEventListener('click', () => { q.value=''; w.value=''; cu.value=''; op.checked=true; apply(); });
+    apply();
+})();
+
 function cancelOrder(orderId) {
     const reason = prompt('سبب الإلغاء (اختياري):', '');
     if (reason === null) return;
@@ -206,4 +275,39 @@ function cancelOrder(orderId) {
     .catch(() => alert('تعذّر الاتصال بالخادم'));
 }
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.cf-bar {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    background: #fff; border: 1px solid #e6ede9; border-radius: 15px;
+    padding: 12px 15px; margin-bottom: 8px;
+}
+.cf-search { position: relative; flex: 1 1 230px; }
+.cf-search i { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); color: #9aaaa3; font-size: .88rem; }
+.cf-search input {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 10px;
+    padding: 9px 38px 9px 13px; font-family: inherit; font-size: .92rem; background: #fafcfb;
+}
+.cf-search input:focus { outline: none; border-color: #006633; background: #fff; }
+.cf-sel {
+    border: 1px solid #e2eae6; border-radius: 10px; padding: 9px 12px;
+    font-family: inherit; font-size: .9rem; background: #fafcfb; color: #33443c; min-width: 145px;
+}
+.cf-sel:focus { outline: none; border-color: #006633; }
+.cf-tog { display: flex; align-items: center; gap: 7px; font-size: .9rem; color: #33443c; margin: 0; cursor: pointer; }
+.cf-tog input { width: 16px; height: 16px; accent-color: #006633; cursor: pointer; }
+.cf-reset { background: #fdeef0; color: #b3121b; border: 1px solid #f6d9de; border-radius: 10px;
+            padding: 8px 13px; font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.cf-reset:hover { background: #b3121b; color: #fff; }
+.cf-count { color: #7b8c84; font-size: .85rem; margin: 0 4px 16px; min-height: 18px; }
+.closed-card { opacity: .68; }
+.closed-card img { filter: grayscale(.85); }
+.cf-none { background: #fff; border: 1px dashed #d5e2db; border-radius: 16px; padding: 40px 20px;
+           text-align: center; margin-bottom: 24px; }
+.cf-none i { font-size: 2rem; color: #c3d3ca; display: block; margin-bottom: 12px; }
+.cf-none b { display: block; color: #33443c; margin-bottom: 5px; }
+.cf-none p { color: #7b8c84; margin: 0; font-size: .9rem; }
+</style>
 {% endblock %}
