@@ -97,10 +97,17 @@
             <span class="mo-state s-{{ o.status }}">{{ STATUS_AR.get(o.status, o.status) }}</span>
         </div>
         <div class="mr-act">
-            {% if o.status == 'delivered' and o.restaurant and o.restaurant.is_open %}
-            <a href="{{ url_for('restaurant_menu', restaurant_id=o.restaurant_id) }}" class="btn btn-again">
-                <i class="fas fa-rotate-right"></i> اطلب مجدداً
-            </a>
+            {% if o.status == 'delivered' %}
+                {% set done = o.reviews.count() > 0 %}
+                <a href="{{ url_for('review_order', order_id=o.id) }}"
+                   class="btn btn-rate {{ 'done' if done }}">
+                    <i class="fas fa-star"></i> {{ 'عدّل تقييمك' if done else 'قيّم' }}
+                </a>
+                {% if o.restaurant and o.restaurant.is_open %}
+                <a href="{{ url_for('restaurant_menu', restaurant_id=o.restaurant_id) }}" class="btn btn-again">
+                    <i class="fas fa-rotate-right"></i> اطلب مجدداً
+                </a>
+                {% endif %}
             {% endif %}
         </div>
     </div>
@@ -216,6 +223,11 @@ function cancelOrder(orderId) {
 .btn-again { background: #f1f6f3; color: #006633; border: 1px solid #dfeae4; border-radius: 10px;
              padding: 7px 14px; font-size: .82rem; font-weight: 600; white-space: nowrap; }
 .btn-again:hover { background: #006633; color: #fff; }
+.btn-rate { background: #fff8e6; color: #a3730a; border: 1px solid #eddfae; border-radius: 10px;
+            padding: 7px 14px; font-size: .82rem; font-weight: 700; white-space: nowrap; margin-inline-end: 6px; }
+.btn-rate:hover { background: #f5a623; color: #fff; border-color: #f5a623; }
+.btn-rate.done { background: #f1f6f3; color: #55665e; border-color: #dfeae4; font-weight: 600; }
+.mr-act { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .mo-empty {
     background: #fff; border: 1px dashed #d5e2db; border-radius: 18px;

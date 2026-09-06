@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}قيّم طلبك - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="rv-wrap">
+    <div class="rv-head">
+        <h1>كيف كانت تجربتك؟</h1>
+        <p>تقييمك يساعد المطاعم والسائقين على التحسّن، ويساعد زبائن آخرين على الاختيار.</p>
+        <small dir="ltr">{{ order.order_number }}</small>
+    </div>
+
+    <form method="POST">
+        {# ═══ المطعم ═══ #}
+        {% if order.restaurant %}
+        <section class="rv-card">
+            <div class="rv-target">
+                {% if order.restaurant.image_url %}
+                <img src="{{ order.restaurant.image_url }}" alt="">
+                {% else %}
+                <div class="rv-ph"><i class="fas fa-utensils"></i></div>
+                {% endif %}
+                <div>
+                    <b>{{ order.restaurant.name_ar }}</b>
+                    <span>الطعام والجودة</span>
+                </div>
+            </div>
+
+            <div class="stars" data-for="restaurant_stars">
+                {% set cur = existing.get('restaurant').stars if existing.get('restaurant') else 0 %}
+                {% for n in [1,2,3,4,5] %}
+                <button type="button" class="star {{ 'on' if n <= cur }}" data-v="{{ n }}" aria-label="{{ n }} نجوم">★</button>
+                {% endfor %}
+                <span class="stars-label">{{ ['','سيّئ','مقبول','جيد','جيد جداً','ممتاز'][cur] }}</span>
+            </div>
+            <input type="hidden" name="restaurant_stars" value="{{ cur }}">
+
+            <textarea name="restaurant_comment" rows="3" maxlength="400"
+                      placeholder="ما رأيك في الطعام؟ (اختياري)">{{ existing.get('restaurant').comment if existing.get('restaurant') else '' }}</textarea>
+        </section>
+        {% endif %}
+
+        {# ═══ السائق ═══ #}
+        {% if order.driver %}
+        <section class="rv-card">
+            <div class="rv-target">
+                <div class="rv-ph drv"><i class="fas fa-motorcycle"></i></div>
+                <div>
+                    <b>{{ order.driver.username }}</b>
+                    <span>سرعة التوصيل والتعامل</span>
+                </div>
+            </div>
+
+            <div class="stars" data-for="driver_stars">
+                {% set dcur = existing.get('driver').stars if existing.get('driver') else 0 %}
+                {% for n in [1,2,3,4,5] %}
+                <button type="button" class="star {{ 'on' if n <= dcur }}" data-v="{{ n }}" aria-label="{{ n }} نجوم">★</button>
+                {% endfor %}
+                <span class="stars-label">{{ ['','سيّئ','مقبول','جيد','جيد جداً','ممتاز'][dcur] }}</span>
+            </div>
+            <input type="hidden" name="driver_stars" value="{{ dcur }}">
+
+            <textarea name="driver_comment" rows="3" maxlength="400"
+                      placeholder="كيف كان تعامل السائق؟ (اختياري)">{{ existing.get('driver').comment if existing.get('driver') else '' }}</textarea>
+        </section>
+        {% endif %}
+
+        <div class="rv-acts">
+            <button type="submit" class="btn btn-send">
+                <i class="fas fa-paper-plane"></i> أرسل التقييم
+            </button>
+            <a href="{{ url_for('my_orders') }}" class="btn btn-skip">لاحقاً</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+const LABELS = ['', 'سيّئ', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
+document.querySelectorAll('.stars').forEach(group => {
+    const field = document.querySelector(`input[name="${group.dataset.for}"]`);
+    const label = group.querySelector('.stars-label');
+    const stars = group.querySelectorAll('.star');
+
+    function paint(v) {
+        stars.forEach(s => s.classList.toggle('on', Number(s.dataset.v) <= v));
+        label.textContent = LABELS[v] || '';
+    }
+    stars.forEach(s => {
+        s.addEventListener('click', () => { field.value = s.dataset.v; paint(Number(s.dataset.v)); });
+        s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
+    });
+    group.addEventListener('mouseleave', () => paint(Number(field.value) || 0));
+});
+</script>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.rv-wrap { max-width: 640px; margin: 0 auto; }
+.rv-head { text-align: center; margin-bottom: 26px; }
+.rv-head h1 { font-weight: 800; font-size: 1.7rem; color: #12201a; margin-bottom: 8px; }
+.rv-head p { color: #7b8c84; margin-bottom: 6px; }
+.rv-head small { color: #b3c1ba; font-size: .78rem; }
+
+.rv-card { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px; margin-bottom: 16px; }
+.rv-target { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.rv-target img, .rv-ph { width: 58px; height: 58px; border-radius: 15px; object-fit: cover; flex-shrink: 0; }
+.rv-ph { background: #e8f3ed; color: #006633; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+.rv-ph.drv { background: #fdeef0; color: #b3121b; }
+.rv-target b { display: block; font-size: 1.08rem; font-weight: 700; color: #12201a; }
+.rv-target span { font-size: .85rem; color: #9aaaa3; }
+
+.stars { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.star {
+    background: none; border: 0; padding: 0 2px; cursor: pointer; line-height: 1;
+    font-size: 2.4rem; color: #dde5e0; transition: color .12s, transform .12s;
+}
+.star:hover { transform: scale(1.12); }
+.star.on { color: #f5a623; }
+.star:focus-visible { outline: 2px solid #006633; outline-offset: 3px; border-radius: 4px; }
+.stars-label { margin-right: 10px; font-size: .92rem; font-weight: 700; color: #55665e; }
+
+.rv-card textarea {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 12px; padding: 12px 14px;
+    font-family: inherit; font-size: .95rem; background: #fafcfb; resize: vertical;
+}
+.rv-card textarea:focus { outline: none; border-color: #006633; background: #fff; }
+
+.rv-acts { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+.btn-send { background: #006633; color: #fff; border: 0; border-radius: 12px; padding: 13px 34px; font-weight: 700; }
+.btn-send:hover { background: #004d26; color: #fff; }
+.btn-skip { background: #f1f5f3; color: #55665e; border: 1px solid #e2eae6; border-radius: 12px; padding: 13px 26px; font-weight: 600; }
+.btn-skip:hover { background: #e7ede9; color: #12201a; }
+</style>
+{% endblock %}

@@ -1,5 +1,76 @@
 {% extends "base.html" %}
-{% block title %}{{ restaurant.name_ar }} - ملف المطعم{% endblock %}
+{% block title %}{{ restaurant.name_ar }} - ملف المطعم
+<!-- ═══ تقييمات الزبائن ═══ -->
+<section class="rvw">
+    <div class="rvw-head">
+        <div>
+            <h4>تقييمات الزبائن</h4>
+            <p>{{ reviews_count }} تقييم</p>
+        </div>
+        <div class="rvw-score">
+            <b>{{ restaurant.rating or 0 }}</b>
+            <div class="rvw-stars">
+                {% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= (restaurant.rating or 0)|round(0,'common')|int }}">★</span>{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if reviews_count %}
+    <div class="rvw-bars">
+        {% for n in [5,4,3,2,1] %}
+        <div class="rvw-bar">
+            <span>{{ n }}★</span>
+            <div class="track"><i style="width: {{ (breakdown[n] / reviews_count * 100)|round(1) }}%"></i></div>
+            <b>{{ breakdown[n] }}</b>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if reviews %}
+    <ul class="rvw-list">
+        {% for r in reviews %}
+        <li>
+            <div class="rvw-top">
+                <b>{{ r.customer.username if r.customer else 'زبون' }}</b>
+                <span class="rvw-mini">{% for n in [1,2,3,4,5] %}<span class="{{ 'on' if n <= r.stars }}">★</span>{% endfor %}</span>
+                <small>{{ r.created_at.strftime('%Y-%m-%d') if r.created_at else '' }}</small>
+            </div>
+            {% if r.comment %}<p>{{ r.comment }}</p>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="rvw-none">لا توجد تقييمات بعد — كن أول من يقيّم بعد طلبك.</p>
+    {% endif %}
+</section>
+
+<style>
+.rvw { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px; margin-top: 26px; }
+.rvw-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+            padding-bottom: 16px; border-bottom: 1px solid #eef3f0; margin-bottom: 16px; }
+.rvw-head h4 { font-weight: 800; color: #12201a; margin: 0 0 2px; }
+.rvw-head p { color: #9aaaa3; margin: 0; font-size: .85rem; }
+.rvw-score { text-align: center; }
+.rvw-score b { display: block; font-size: 2rem; font-weight: 800; color: #12201a; line-height: 1.1; }
+.rvw-stars span, .rvw-mini span { color: #dde5e0; font-size: 1rem; }
+.rvw-stars span.on, .rvw-mini span.on { color: #f5a623; }
+.rvw-mini span { font-size: .85rem; }
+.rvw-bars { display: grid; gap: 6px; margin-bottom: 20px; }
+.rvw-bar { display: grid; grid-template-columns: 32px 1fr 30px; align-items: center; gap: 10px; font-size: .8rem; color: #7b8c84; }
+.rvw-bar .track { height: 7px; background: #eef3f0; border-radius: 99px; overflow: hidden; }
+.rvw-bar .track i { display: block; height: 100%; background: #f5a623; border-radius: 99px; }
+.rvw-bar b { color: #33443c; text-align: left; }
+.rvw-list { list-style: none; padding: 0; margin: 0; }
+.rvw-list li { padding: 14px 0; border-bottom: 1px solid #f2f6f4; }
+.rvw-list li:last-child { border-bottom: 0; }
+.rvw-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rvw-top b { color: #12201a; font-size: .95rem; }
+.rvw-top small { color: #b3c1ba; font-size: .76rem; margin-inline-start: auto; }
+.rvw-list p { margin: 7px 0 0; color: #55665e; font-size: .92rem; line-height: 1.8; }
+.rvw-none { color: #9aaaa3; margin: 0; font-size: .92rem; }
+</style>
+{% endblock %}
 
 {% block content %}
 

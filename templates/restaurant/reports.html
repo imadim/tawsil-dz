@@ -98,6 +98,10 @@
                         <b>{{ d.orders }}</b><span>توصيلة</span>
                     </div>
                     <div class="rk-nums">
+                        <b class="star">{{ d.stars or '—' }}{% if d.stars %} ★{% endif %}</b>
+                        <span>تقييم</span>
+                    </div>
+                    <div class="rk-nums">
                         <b class="{{ 'good' if d.rate >= 90 else ('mid' if d.rate >= 70 else 'low') }}">{{ d.rate }}٪</b>
                         <span>إتمام</span>
                     </div>
@@ -152,7 +156,7 @@
 .bar-lbl { font-size: .64rem; color: #9aaaa3; white-space: nowrap; }
 
 .rank { list-style: none; margin: 0; padding: 0; }
-.rank li { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 12px; align-items: center;
+.rank li { display: grid; grid-template-columns: 30px 1fr auto auto auto; gap: 10px; align-items: center;
            padding: 11px 0; border-bottom: 1px solid #f1f5f3; }
 .rank li:last-child { border-bottom: 0; }
 .rk { width: 27px; height: 27px; border-radius: 50%; background: #e8f3ed; color: #006633;
@@ -163,7 +167,7 @@
 .rk-nums { text-align: center; min-width: 56px; }
 .rk-nums b { display: block; font-size: 1rem; font-weight: 700; color: #12201a; }
 .rk-nums span { font-size: .7rem; color: #9aaaa3; }
-.rk-nums b.good { color: #006633; } .rk-nums b.mid { color: #b06a00; } .rk-nums b.low { color: #b3121b; }
+.rk-nums b.star { color: #b8860b; } .rk-nums b.good { color: #006633; } .rk-nums b.mid { color: #b06a00; } .rk-nums b.low { color: #b3121b; }
 
 @media (max-width: 900px) { .rp-money { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .chart { height: 150px; } .bar-val { display: none; } }

@@ -324,6 +324,9 @@ def ensure_schema():
                 ('menu_items', 'total_reviews', 'INTEGER', '0'),
                 ('orders',     'cancelled_by',  'VARCHAR(20)',  'NULL'),
                 ('orders',     'cancel_reason', 'VARCHAR(200)', 'NULL'),
+                ('users',      'rating',        'FLOAT',        '0'),
+                ('users',      'total_reviews', 'INTEGER',      '0'),
+                ('restaurants','total_reviews', 'INTEGER',      '0'),
             ]:
                 if table in insp.get_table_names():
                     existing = {c['name'] for c in insp.get_columns(table)}
@@ -1078,10 +1081,18 @@ def restaurant_profile(restaurant_id):
         restaurant_id=restaurant_id,
         is_available=True
     ).all()
+    reviews = Review.query.filter_by(target_type='restaurant', target_id=restaurant_id)\
+                          .order_by(Review.created_at.desc()).limit(20).all()
+    breakdown = {n: Review.query.filter_by(target_type='restaurant',
+                                           target_id=restaurant_id, stars=n).count()
+                 for n in range(5, 0, -1)}
     return render_template(
         'restaurant_profile.html',
         restaurant=restaurant,
-        menu_items=menu_items
+        menu_items=menu_items,
+        reviews=reviews,
+        breakdown=breakdown,
+        reviews_count=sum(breakdown.values())
     )
 
 
@@ -1127,6 +1138,83 @@ def my_orders():
                            active_orders=active, past_orders=past,
                            total_spent=spent,
                            delivered_count=len([o for o in past if o.status == 'delivered']))
+
+
+def refresh_rating(target_type, target_id):
+    """يعيد حساب متوسط النجوم وعدد التقييمات للهدف"""
+    rows = Review.query.filter_by(target_type=target_type, target_id=target_id).all()
+    n = len(rows)
+    avg = round(sum(r.stars for r in rows) / n, 1) if n else 0.0
+    obj = Restaurant.query.get(target_id) if target_type == 'restaurant' else User.query.get(target_id)
+    if obj:
+        obj.rating = avg
+        if hasattr(obj, 'total_reviews'):
+            obj.total_reviews = n
+        db.session.commit()
+    return avg, n
+
+
+@app.route('/order/<int:order_id>/review', methods=['GET', 'POST'])
+@login_required
+def review_order(order_id):
+    """تقييم المطعم والسائق بعد التسليم"""
+    order = Order.query.get_or_404(order_id)
+
+    if order.customer_id != current_user.id:
+        flash('لا تملك صلاحية تقييم هذا الطلب', 'danger')
+        return redirect(url_for('my_orders'))
+
+    if order.status != 'delivered':
+        flash('يمكن التقييم بعد تسليم الطلب فقط', 'warning')
+        return redirect(url_for('my_orders'))
+
+    existing = {r.target_type: r for r in order.reviews}
+
+    if request.method == 'POST':
+        saved = 0
+
+        def upsert(kind, target_id, stars_key, comment_key):
+            nonlocal saved
+            if not target_id:
+                return
+            try:
+                stars = int(request.form.get(stars_key, 0))
+            except (TypeError, ValueError):
+                return
+            if stars < 1 or stars > 5:
+                return
+            comment = (request.form.get(comment_key) or '').strip()[:400]
+            rv = existing.get(kind)
+            if rv:
+                rv.stars, rv.comment = stars, comment
+            else:
+                db.session.add(Review(order_id=order.id, customer_id=current_user.id,
+                                      target_type=kind, target_id=target_id,
+                                      stars=stars, comment=comment))
+            saved += 1
+
+        upsert('restaurant', order.restaurant_id, 'restaurant_stars', 'restaurant_comment')
+        upsert('driver',     order.driver_id,     'driver_stars',     'driver_comment')
+        db.session.commit()
+
+        if order.restaurant_id:
+            refresh_rating('restaurant', order.restaurant_id)
+        if order.driver_id:
+            refresh_rating('driver', order.driver_id)
+
+        if saved:
+            if order.restaurant and order.restaurant.user_id:
+                create_notification(order.restaurant.user_id, '⭐ تقييم جديد',
+                                    f'قيّم {current_user.username} طلبه من مطعمك', order.id)
+            if order.driver_id:
+                create_notification(order.driver_id, '⭐ تقييم جديد',
+                                    f'قيّم {current_user.username} توصيلتك', order.id)
+            flash('شكراً لك — سُجّل تقييمك', 'success')
+        else:
+            flash('لم تختر أي نجوم', 'warning')
+        return redirect(url_for('my_orders'))
+
+    return render_template('customer/review.html', order=order, existing=existing)
 
 
 @app.route('/restaurant/orders')
@@ -1221,6 +1309,7 @@ def restaurant_reports():
         taken = Order.query.filter_by(restaurant_id=rest.id, driver_id=did)\
                            .filter(Order.status != 'cancelled').count()
         e['rate'] = round(100.0 * e['orders'] / taken) if taken else 100
+        e['stars'] = (e['user'].rating or 0) if e['user'] else 0
     trusted = sorted(by_driver.values(), key=lambda x: (-x['orders'], -x['rate']))[:8]
 
     return render_template('restaurant/reports.html',
@@ -1378,11 +1467,15 @@ def driver_dashboard():
         sum(o.delivery_fee for o in completed_orders)
     )
     
+    my_reviews = Review.query.filter_by(target_type='driver', target_id=current_user.id)\
+                             .order_by(Review.created_at.desc()).limit(5).all()
+
     return render_template('driver/dashboard.html',
                          available_orders=available_orders,
                          active_orders=active_orders,
                          total_earnings=total_earnings,
-                         completed_count=len(completed_orders))
+                         completed_count=len(completed_orders),
+                         my_reviews=my_reviews)
 
 
 @app.route('/driver/toggle_availability', methods=['POST'])

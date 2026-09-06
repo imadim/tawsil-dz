@@ -24,6 +24,8 @@ class User(UserMixin, db.Model):
     
     is_active = db.Column(db.Boolean, default=True, index=True)
     is_verified = db.Column(db.Boolean, default=False)
+    rating = db.Column(db.Float, default=0.0)
+    total_reviews = db.Column(db.Integer, default=0)
     
     # Driver specific
     is_available = db.Column(db.Boolean, default=False, index=True)
@@ -75,6 +77,7 @@ class Restaurant(db.Model):
     cuisine = db.Column(db.String(50), index=True, default='أخرى')
     is_open = db.Column(db.Boolean, default=True, index=True)
     rating = db.Column(db.Float, default=0.0)
+    total_reviews = db.Column(db.Integer, default=0)
     
     commission_rate = db.Column(db.Float, default=10.0)
     
@@ -263,3 +266,29 @@ class PricingSetting(db.Model):
 
     def __repr__(self):
         return f'<PricingSetting base={self.base_fee} surge={self.surge_enabled}>'
+
+
+class Review(db.Model):
+    """تقييم بنجوم وتعليق — للمطعم أو للسائق، مرتبط بطلب مسلَّم"""
+    __tablename__ = 'reviews'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    order_id    = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, index=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    target_type = db.Column(db.String(12), nullable=False, index=True)   # restaurant | driver
+    target_id   = db.Column(db.Integer, nullable=False, index=True)
+
+    stars       = db.Column(db.Integer, nullable=False)                  # من 1 إلى 5
+    comment     = db.Column(db.String(400))
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    order    = db.relationship('Order', backref=db.backref('reviews', lazy='dynamic'))
+    customer = db.relationship('User', foreign_keys=[customer_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('order_id', 'target_type', name='uq_review_order_target'),
+    )
+
+    def __repr__(self):
+        return f'<Review {self.target_type}#{self.target_id} {self.stars}★>'
