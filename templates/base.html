@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}توصيل جزائري{% endblock %}</title>
     
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#006633">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="توصيل DZ">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32.png">
+
     <!-- Bootstrap RTL CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     
@@ -328,6 +338,7 @@
         
         socket.on('new_notification', (data) => {
             showToast(data.title, data.message);
+            showNativeNotification(data.title, data.message);
             loadNotifications();
         });
         
@@ -418,7 +429,104 @@
             setInterval(loadNotifications, 30000);
         });
         {% endif %}
+
+        /* ============================================
+           PWA — التثبيت والإشعارات
+           ============================================ */
+
+        // تسجيل الـ service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(() => console.log('✅ Service Worker مسجّل'))
+                    .catch((err) => console.warn('Service Worker فشل:', err));
+            });
+        }
+
+        // إشعار نظام حقيقي على الهاتف
+        function showNativeNotification(title, body) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            const opts = {
+                body: body,
+                icon: '/static/images/icon-192.png',
+                badge: '/static/images/icon-192.png',
+                dir: 'rtl',
+                lang: 'ar',
+                tag: 'tawsil-order',
+                renotify: true,
+                vibrate: [120, 60, 120]
+            };
+            // عبر الـ service worker حتى يظهر الإشعار ولو كان التطبيق في الخلفية
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready
+                    .then((reg) => reg.showNotification(title, opts))
+                    .catch(() => { try { new Notification(title, opts); } catch (e) {} });
+            } else {
+                try { new Notification(title, opts); } catch (e) {}
+            }
+        }
+
+        // طلب إذن الإشعارات بعد أول تفاعل (المتصفحات ترفض الطلب التلقائي)
+        {% if current_user.is_authenticated %}
+        function askNotificationPermission() {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then((p) => {
+                    if (p === 'granted') {
+                        showNativeNotification('توصيل DZ', 'راك تقبل الإشعارات ✅ غادي نعلموك بكل تحديث في طلبيتك');
+                    }
+                });
+            }
+        }
+        ['click', 'touchstart'].forEach((evt) =>
+            document.addEventListener(evt, askNotificationPermission, { once: true })
+        );
+        {% endif %}
+
+        // زر التثبيت على الشاشة الرئيسية
+        let deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const btn = document.getElementById('pwaInstallBtn');
+            if (btn) btn.style.display = 'flex';
+        });
+
+        function installApp() {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            deferredInstallPrompt.userChoice.then(() => {
+                deferredInstallPrompt = null;
+                const btn = document.getElementById('pwaInstallBtn');
+                if (btn) btn.style.display = 'none';
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            const btn = document.getElementById('pwaInstallBtn');
+            if (btn) btn.style.display = 'none';
+        });
     </script>
+
+    <!-- زر التثبيت (يظهر فقط إذا كان التثبيت متاحاً) -->
+    <button id="pwaInstallBtn" onclick="installApp()" style="display:none;">
+        <i class="fas fa-mobile-screen-button"></i>
+        <span>ثبّت التطبيق</span>
+    </button>
+    <style>
+        #pwaInstallBtn {
+            position: fixed; bottom: 18px; inset-inline-end: 18px; z-index: 1050;
+            align-items: center; gap: 9px;
+            background: var(--dz-green, #006633); color: #fff;
+            border: 0; border-radius: 999px; padding: 13px 22px;
+            font-family: inherit; font-size: .95rem; font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0,102,51,.35); cursor: pointer;
+        }
+        #pwaInstallBtn:active { transform: scale(.96); }
+        @media (display-mode: standalone) { #pwaInstallBtn { display: none !important; } }
+    </style>
     
     {% block extra_js %}{% endblock %}
 </body>

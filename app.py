@@ -1561,6 +1561,34 @@ def utility_processor():
 
 
 # ============================================
+# PWA — تطبيق قابل للتثبيت على الهاتف
+# ============================================
+# الـ service worker لازم يُقدَّم من جذر الموقع حتى يغطّي كل الصفحات،
+# لذلك نمرّره من / بدل /static/ .
+
+@app.route('/sw.js')
+def service_worker():
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
+
+@app.route('/manifest.json')
+def pwa_manifest():
+    response = send_from_directory('static', 'manifest.json')
+    response.headers['Content-Type'] = 'application/manifest+json; charset=utf-8'
+    return response
+
+
+@app.route('/offline')
+def offline_page():
+    """تُعرض عند انقطاع الاتصال (يخزّنها الـ service worker)"""
+    return render_template('offline.html')
+
+
+# ============================================
 # AUTO-INIT ON SERVER (Render / Railway / gunicorn)
 # ============================================
 # عند التشغيل عبر gunicorn لا يُنفَّذ بلوك __main__، لذا ننشئ الجداول هنا.
