@@ -235,13 +235,84 @@
 </section>
 {% endif %}
 
+<!-- ═══════════ حمّل التطبيق ═══════════ -->
+<section class="appdl">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-7">
+            <span class="ad-tag"><i class="fas fa-mobile-screen-button"></i> نسخة الهاتف</span>
+            <h2>حمّل التطبيق على هاتفك</h2>
+            <p>توصيل DZ تطبيق ويب تقدّمي (PWA) — يتثبّت مباشرة من المتصفح بلا Play Store وبلا مساحة تخزين كبيرة،
+               ويخدم بملء الشاشة مع إشعارات فورية على كل تغيير في طلبيتك.</p>
+
+            <div class="ad-steps">
+                <div class="ad-step">
+                    <b>أندرويد</b>
+                    <span>حلّ الموقع من Chrome ← اضغط زر «ثبّت التطبيق» الأخضر تحت الشاشة</span>
+                </div>
+                <div class="ad-step">
+                    <b>آيفون</b>
+                    <span>حلّ الموقع من Safari ← رمز المشاركة ← «إضافة إلى الشاشة الرئيسية»</span>
+                </div>
+            </div>
+
+            <button class="btn btn-appdl" onclick="installApp()">
+                <i class="fas fa-download"></i> ثبّت التطبيق الآن
+            </button>
+            <p class="ad-note">إذا ما بانش الزر، معناها التطبيق مثبّت من قبل ولا المتصفح ما يدعمش التثبيت — استعمل خطوات فوق.</p>
+        </div>
+
+        <div class="col-lg-5 text-center">
+            <div class="ad-qr">
+                <img src="{{ url_for('static', filename='images/qr-app.png') }}" alt="امسح الرمز باش تحلّ الموقع على هاتفك">
+                <strong>امسح الرمز بكاميرا هاتفك</strong>
+                <small>يحلّ لك الموقع مباشرة</small>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════ فريق التطوير ═══════════ -->
+<section class="team">
+    <div class="team-head">
+        <h2>فريق التطوير</h2>
+        <p>المنصة من تصميم وتطوير فريق جزائري</p>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="team-card">
+                <div class="tc-av">ف</div>
+                <h5>فاتح العربي</h5>
+                <span>مطوّر</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="team-card">
+                <div class="tc-av">ب</div>
+                <h5>بوعزة عبد الحميد</h5>
+                <span>مطوّر</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="team-card">
+                <div class="tc-av">أ</div>
+                <h5>برابح أمحمد</h5>
+                <span>مطوّر</span>
+            </div>
+        </div>
+    </div>
+    <div class="team-contact">
+        <a href="tel:0558651909"><i class="fas fa-phone"></i> 0558651909</a>
+        <a href="mailto:a.hammid223@gmail.com"><i class="fas fa-envelope"></i> a.hammid223@gmail.com</a>
+    </div>
+</section>
+
 <!-- ═══════════ الدليل ═══════════ -->
 <section class="guide-cta">
     <div>
         <h4><i class="fas fa-book-open"></i> ما فهمتش كيفاش تخدم المنصة؟</h4>
         <p>أدلة قصيرة وعملية للزبون، صاحب المطعم، والسائق — تقراها ولا تحمّلها PDF.</p>
     </div>
-    <a href="{{ url_for('guide') }}" class="btn btn-guide">شوف الأدلة <i class="fas fa-arrow-left"></i></a>
+    <a href="{{ url_for('guide') }}" class="btn btn-guide">اقرأ دليل الاستعمال <i class="fas fa-arrow-left"></i></a>
 </section>
 
 {% endblock %}
@@ -473,6 +544,67 @@
 }
 .btn-guide:hover { background: #006633; color: #fff; }
 
+/* ───────── حمّل التطبيق ───────── */
+.appdl {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 22px;
+    padding: 42px 38px; margin-bottom: 58px;
+}
+.ad-tag {
+    display: inline-flex; align-items: center; gap: 7px; background: #e8f3ed; color: #006633;
+    border-radius: 999px; padding: 6px 15px; font-size: .82rem; font-weight: 700; margin-bottom: 14px;
+}
+.appdl h2 { font-weight: 800; color: #12201a; margin-bottom: 12px; font-size: 1.6rem; }
+.appdl > .row > div > p { color: #5d6f67; line-height: 1.95; margin-bottom: 22px; }
+.ad-steps { display: grid; gap: 11px; margin-bottom: 24px; }
+.ad-step {
+    background: #f6faf8; border: 1px solid #e6ede9; border-radius: 13px; padding: 13px 16px;
+    display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap;
+}
+.ad-step b { color: #006633; font-weight: 800; min-width: 62px; }
+.ad-step span { color: #55665e; font-size: .9rem; flex: 1; }
+.btn-appdl {
+    background: #006633; color: #fff; border: 0; border-radius: 12px;
+    padding: 13px 30px; font-weight: 700; font-family: inherit;
+}
+.btn-appdl:hover { background: #004d26; color: #fff; }
+.ad-note { color: #9aaaa3; font-size: .82rem; margin: 12px 0 0; }
+.ad-qr {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
+    background: #f6faf8; border: 1px solid #e6ede9; border-radius: 22px; padding: 22px 24px;
+}
+.ad-qr img { width: 190px; height: auto; border-radius: 12px; margin-bottom: 12px; }
+.ad-qr strong { color: #12201a; font-size: .93rem; }
+.ad-qr small { color: #7b8c84; font-size: .82rem; }
+
+/* ───────── فريق التطوير ───────── */
+.team { margin-bottom: 58px; }
+.team-head { text-align: center; margin-bottom: 26px; }
+.team-head h2 { font-weight: 800; color: #12201a; font-size: 1.6rem; margin-bottom: 6px; }
+.team-head p { color: #7b8c84; margin: 0; font-size: .93rem; }
+.team-card {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 18px;
+    padding: 28px 20px; text-align: center; height: 100%; transition: .25s;
+}
+.team-card:hover { transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0,60,30,.09); }
+.tc-av {
+    width: 62px; height: 62px; border-radius: 50%; margin: 0 auto 15px;
+    background: linear-gradient(135deg, #006633 0%, #00913f 100%);
+    color: #fff; font-size: 1.5rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+}
+.team-card h5 { font-weight: 700; color: #12201a; margin-bottom: 4px; font-size: 1.05rem; }
+.team-card span { color: #7b8c84; font-size: .85rem; }
+.team-contact {
+    display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-top: 26px;
+}
+.team-contact a {
+    background: #f1f6f3; border: 1px solid #e2eae6; border-radius: 11px;
+    padding: 10px 18px; color: #33443c; text-decoration: none; font-size: .9rem; font-weight: 600;
+}
+.team-contact a:hover { background: #006633; color: #fff; border-color: #006633; }
+.team-contact i { color: #006633; margin-left: 6px; }
+.team-contact a:hover i { color: #fff; }
+
 /* ───────── الهاتف ───────── */
 @media (max-width: 991px) {
     .hero { padding: 34px 22px 30px; border-radius: 20px; }
@@ -488,6 +620,9 @@
     .hero-stats { gap: 26px; }
     .hero-stats strong { font-size: 1.32rem; }
     .guide-cta { padding: 24px 22px; }
+    .appdl { padding: 28px 22px; }
+    .ad-qr { margin-top: 8px; }
+    .ad-qr img { width: 158px; }
 }
 </style>
 {% endblock %}

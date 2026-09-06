@@ -58,6 +58,7 @@
         .footer-links a { color: #a8b8b0; text-decoration: none; }
         .footer-links a:hover { color: #fff; }
         .footer-links i { width: 18px; color: #4fae7a; }
+        .footer-team { color: #93a49c; font-size: .87rem; line-height: 1.9; margin: 0; }
         .footer-bottom {
             border-top: 1px solid #24352c; margin-top: 34px; padding: 18px 0;
             display: flex; justify-content: space-between; align-items: center;
@@ -325,10 +326,12 @@
                 <div class="col-md-4">
                     <h6>تواصل معنا</h6>
                     <ul class="footer-links">
-                        <li><i class="fas fa-phone"></i> 0550-123-456</li>
-                        <li><i class="fas fa-envelope"></i> contact@delivery.dz</li>
+                        <li><i class="fas fa-phone"></i> <a href="tel:0558651909">0558651909</a></li>
+                        <li><i class="fas fa-envelope"></i> <a href="mailto:a.hammid223@gmail.com">a.hammid223@gmail.com</a></li>
                         <li><i class="fas fa-location-dot"></i> الجزائر</li>
                     </ul>
+                    <h6 class="mt-4">فريق التطوير</h6>
+                    <p class="footer-team">فاتح العربي &nbsp;·&nbsp; بوعزة عبد الحميد &nbsp;·&nbsp; برابح أمحمد</p>
                 </div>
             </div>
             <div class="footer-bottom">
@@ -542,7 +545,15 @@
         });
 
         function installApp() {
-            if (!deferredInstallPrompt) return;
+            if (!deferredInstallPrompt) {
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    showToast('التطبيق مثبّت', 'راك تستعمل التطبيق المثبّت على هاتفك ✅');
+                } else {
+                    showToast('التثبيت غير متاح هنا',
+                              'حلّ الموقع من متصفح هاتفك (Chrome ولا Safari) وتبّع الخطوات فوق.');
+                }
+                return;
+            }
             deferredInstallPrompt.prompt();
             deferredInstallPrompt.userChoice.then(() => {
                 deferredInstallPrompt = null;
