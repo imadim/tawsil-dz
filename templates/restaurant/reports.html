@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}أرباحي وتقاريري - {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="rp-head">
+    <div>
+        <h1>أرباحي وتقاريري</h1>
+        <p>{{ restaurant.name_ar }} — عمولة المنصة {{ commission_rate }}٪ على قيمة الطعام</p>
+    </div>
+    <div class="rp-headacts">
+        <a href="{{ url_for('restaurant_orders') }}" class="btn btn-light btn-sm"><i class="fas fa-receipt"></i> كل الطلبات</a>
+        <a href="{{ url_for('restaurant_dashboard') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-gauge"></i> اللوحة</a>
+    </div>
+</div>
+
+{# ═══ الأرباح ═══ #}
+<div class="rp-money">
+    {% for k, label, note in [('today','اليوم','منذ منتصف الليل'), ('month','هذا الشهر','منذ أول الشهر'), ('total','الإجمالي','منذ البداية')] %}
+    {% set m = today if k=='today' else (month if k=='month' else total) %}
+    <div class="rp-card {{ 'lead' if k=='today' }}">
+        <span class="rp-label">{{ label }}</span>
+        <b class="rp-net">{{ m.net|round|int }} <small>د.ج</small></b>
+        <span class="rp-sub">صافي ما يعود إليك</span>
+        <div class="rp-break">
+            <div><span>مبيعات</span><b>{{ m.gross|round|int }}</b></div>
+            <div><span>عمولة</span><b class="minus">−{{ m.commission|round|int }}</b></div>
+            <div><span>طلبات</span><b>{{ m.orders }}</b></div>
+        </div>
+        <small class="rp-note">{{ note }}</small>
+    </div>
+    {% endfor %}
+</div>
+
+{# ═══ مبيعات أسبوعين ═══ #}
+<section class="rp-block">
+    <h2>المبيعات خلال 14 يوماً</h2>
+    {% set peak = (daily | map(attribute='gross') | max) or 0 %}
+    {% if peak > 0 %}
+    <div class="chart">
+        {% for d in daily %}
+        <div class="bar-wrap" title="{{ d.label }} — {{ d.gross|round|int }} د.ج · {{ d.orders }} طلب">
+            <div class="bar-val">{{ d.gross|round|int if d.gross else '' }}</div>
+            <div class="bar" style="height: {{ (d.gross / peak * 100) | round(1) if peak else 0 }}%"></div>
+            <div class="bar-lbl">{{ d.label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="rp-none">لا توجد مبيعات مسجّلة بعد في هذه الفترة.</p>
+    {% endif %}
+</section>
+
+<div class="row g-4">
+    {# ═══ الزبائن الأوفياء ═══ #}
+    <div class="col-lg-6">
+        <section class="rp-block h-100">
+            <h2>زبائنك الأوفياء</h2>
+            <p class="rp-hint">الأكثر طلباً من مطعمك — تعرَّف عليهم وقدّم لهم ما يبقيهم.</p>
+            {% if loyal %}
+            <ol class="rank">
+                {% for c in loyal %}
+                <li>
+                    <span class="rk">{{ loop.index }}</span>
+                    <div class="rk-main">
+                        <b>{{ c.user.username if c.user else 'زبون' }}</b>
+                        <small dir="ltr">{{ c.user.phone if c.user else '' }}</small>
+                    </div>
+                    <div class="rk-nums">
+                        <b>{{ c.orders }}</b><span>طلب</span>
+                    </div>
+                    <div class="rk-nums">
+                        <b>{{ c.spent|round|int }}</b><span>د.ج</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="rp-none">لم يكتمل أي طلب بعد — القائمة تظهر بعد أول تسليم.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    {# ═══ السائقون الموثوقون ═══ #}
+    <div class="col-lg-6">
+        <section class="rp-block h-100">
+            <h2>السائقون الموثوقون</h2>
+            <p class="rp-hint">الأكثر توصيلاً لطلبات مطعمك، ونسبة إتمامهم لما قبلوه.</p>
+            {% if trusted %}
+            <ol class="rank">
+                {% for d in trusted %}
+                <li>
+                    <span class="rk drv">{{ loop.index }}</span>
+                    <div class="rk-main">
+                        <b>{{ d.user.username if d.user else 'سائق' }}</b>
+                        <small dir="ltr">{{ d.user.phone if d.user else '' }}</small>
+                    </div>
+                    <div class="rk-nums">
+                        <b>{{ d.orders }}</b><span>توصيلة</span>
+                    </div>
+                    <div class="rk-nums">
+                        <b class="{{ 'good' if d.rate >= 90 else ('mid' if d.rate >= 70 else 'low') }}">{{ d.rate }}٪</b>
+                        <span>إتمام</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p class="rp-none">لم يوصّل أي سائق طلباً من مطعمك بعد.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.rp-head {
+    background: linear-gradient(135deg, #12201a 0%, #2c4638 100%); color: #fff;
+    border-radius: 20px; padding: 28px 30px; margin-bottom: 22px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.rp-head h1 { font-weight: 800; font-size: 1.6rem; margin: 0 0 4px; }
+.rp-head p { margin: 0; color: rgba(255,255,255,.72); font-size: .9rem; }
+.rp-headacts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.rp-money { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 30px; }
+.rp-card { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 22px 22px 18px; }
+.rp-card.lead { border-color: #bfdccd; box-shadow: 0 10px 26px rgba(0,80,40,.08); }
+.rp-label { font-size: .84rem; color: #7b8c84; font-weight: 600; }
+.rp-net { display: block; font-size: 2rem; font-weight: 800; color: #006633; line-height: 1.3; margin: 4px 0 0; }
+.rp-net small { font-size: .95rem; font-weight: 600; color: #7b8c84; }
+.rp-sub { font-size: .8rem; color: #9aaaa3; }
+.rp-break { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 16px 0 10px;
+            padding-top: 14px; border-top: 1px solid #eef3f0; }
+.rp-break span { display: block; font-size: .74rem; color: #9aaaa3; }
+.rp-break b { font-size: .95rem; color: #33443c; font-weight: 700; }
+.rp-break b.minus { color: #b3121b; }
+.rp-note { color: #9aaaa3; font-size: .74rem; }
+
+.rp-block { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px 24px 20px; margin-bottom: 24px; }
+.rp-block h2 { font-weight: 800; font-size: 1.15rem; color: #12201a; margin: 0 0 5px; }
+.rp-hint { color: #7b8c84; font-size: .87rem; margin: 0 0 18px; }
+.rp-none { color: #9aaaa3; font-size: .9rem; margin: 10px 0 0; }
+
+.chart { display: flex; align-items: flex-end; gap: 6px; height: 190px; margin-top: 18px; }
+.bar-wrap { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            height: 100%; gap: 4px; }
+.bar-val { font-size: .64rem; color: #7b8c84; font-variant-numeric: tabular-nums; height: 13px; }
+.bar { width: 100%; max-width: 34px; min-height: 3px; border-radius: 5px 5px 0 0;
+       background: linear-gradient(180deg, #2a9d5e 0%, #006633 100%); }
+.bar-lbl { font-size: .64rem; color: #9aaaa3; white-space: nowrap; }
+
+.rank { list-style: none; margin: 0; padding: 0; }
+.rank li { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 12px; align-items: center;
+           padding: 11px 0; border-bottom: 1px solid #f1f5f3; }
+.rank li:last-child { border-bottom: 0; }
+.rk { width: 27px; height: 27px; border-radius: 50%; background: #e8f3ed; color: #006633;
+      font-size: .8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.rk.drv { background: #fdeef0; color: #b3121b; }
+.rk-main b { display: block; font-size: .95rem; color: #12201a; font-weight: 600; }
+.rk-main small { color: #9aaaa3; font-size: .76rem; }
+.rk-nums { text-align: center; min-width: 56px; }
+.rk-nums b { display: block; font-size: 1rem; font-weight: 700; color: #12201a; }
+.rk-nums span { font-size: .7rem; color: #9aaaa3; }
+.rk-nums b.good { color: #006633; } .rk-nums b.mid { color: #b06a00; } .rk-nums b.low { color: #b3121b; }
+
+@media (max-width: 900px) { .rp-money { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .chart { height: 150px; } .bar-val { display: none; } }
+</style>
+{% endblock %}

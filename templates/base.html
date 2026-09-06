@@ -260,7 +260,23 @@
                         {% elif current_user.role == 'restaurant' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('restaurant_menu_management') }}">
-                                <i class="fas fa-list-check"></i> إدارة القائمة
+                                <i class="fas fa-list-check"></i> القائمة
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('restaurant_orders') }}">
+                                <i class="fas fa-receipt"></i> الطلبات
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('restaurant_reports') }}">
+                                <i class="fas fa-chart-column"></i> أرباحي
+                            </a>
+                        </li>
+                        {% elif current_user.role == 'customer' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('my_orders') }}">
+                                <i class="fas fa-bag-shopping"></i> طلباتي
                             </a>
                         </li>
                         {% endif %}

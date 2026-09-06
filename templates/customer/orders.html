@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}طلباتي - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="mo-head">
+    <div>
+        <h1>طلباتي</h1>
+        <p>تابع طلبك الجاري، واطّلع على كل ما طلبته سابقاً</p>
+    </div>
+    <a href="{{ url_for('customer_dashboard') }}" class="btn btn-light btn-sm">
+        <i class="fas fa-utensils"></i> اطلب من مطعم
+    </a>
+</div>
+
+<div class="mo-stats">
+    <div><b>{{ active_orders|length }}</b><span>طلب جارٍ</span></div>
+    <div><b>{{ delivered_count }}</b><span>طلب وصل</span></div>
+    <div><b>{{ total_spent|currency }}</b><span>إجمالي ما أنفقته</span></div>
+</div>
+
+{# ═══ الطلبات الجارية ═══ #}
+<h2 class="mo-sec">الطلبات الجارية</h2>
+{% if active_orders %}
+<div class="mo-list">
+    {% for o in active_orders %}
+    <article class="mo-card live">
+        <div class="mo-top">
+            <div>
+                <b>{{ o.restaurant.name_ar if o.restaurant else 'مطعم' }}</b>
+                <small dir="ltr">{{ o.order_number }}</small>
+            </div>
+            <span class="mo-state s-{{ o.status }}">{{ STATUS_AR.get(o.status, o.status) }}</span>
+        </div>
+
+        <ol class="mo-steps">
+            {% set steps = ['pending','confirmed','ready','assigned','picked_up','delivered'] %}
+            {% set cur = 5 if o.status == 'delivered' else (4 if o.status in ['picked_up','delivering'] else steps.index(o.status) if o.status in steps else 0) %}
+            {% for lbl in ['استُلم','يُحضَّر','جاهز','سائق','في الطريق','وصل'] %}
+            <li class="{{ 'done' if loop.index0 <= cur else '' }}"><span></span>{{ lbl }}</li>
+            {% endfor %}
+        </ol>
+
+        <div class="mo-rows">
+            <div><i class="fas fa-location-dot"></i> {{ o.delivery_address }}</div>
+            <div><i class="fas fa-receipt"></i> {{ o.items.count() }} صنف · {{ o.final_amount|currency }}</div>
+            {% if o.driver %}
+            <div><i class="fas fa-motorcycle"></i> {{ o.driver.username }} ·
+                <a href="tel:{{ o.driver.phone }}" dir="ltr">{{ o.driver.phone }}</a></div>
+            {% endif %}
+        </div>
+
+        {% if o.verification_code and o.status in ['assigned','picked_up','delivering'] and not o.is_verified %}
+        <div class="mo-code">
+            <span>كود الاستلام — أعطه للسائق</span>
+            <b>{{ o.verification_code }}</b>
+        </div>
+        {% endif %}
+
+        <div class="mo-acts">
+            <a href="{{ url_for('track_order', order_id=o.id) }}" class="btn btn-track">
+                <i class="fas fa-map-location-dot"></i> تتبّع على الخريطة
+            </a>
+            {% if o.status in ['pending','confirmed'] %}
+            <button class="btn btn-cancel" onclick="cancelOrder({{ o.id }})">
+                <i class="fas fa-xmark"></i> إلغاء
+            </button>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="mo-empty">
+    <i class="fas fa-bowl-food"></i>
+    <b>لا يوجد طلب جارٍ</b>
+    <p>عندما تطلب، ستتابع هنا كل خطوة حتى وصول السائق إليك.</p>
+    <a href="{{ url_for('customer_dashboard') }}" class="btn btn-primary">تصفّح المطاعم</a>
+</div>
+{% endif %}
+
+{# ═══ الطلبات السابقة ═══ #}
+<h2 class="mo-sec">الطلبات السابقة</h2>
+{% if past_orders %}
+<div class="mo-past">
+    {% for o in past_orders %}
+    <div class="mo-row {{ 'cancelled' if o.status == 'cancelled' }}">
+        <div class="mr-main">
+            <b>{{ o.restaurant.name_ar if o.restaurant else '—' }}</b>
+            <small>{{ o.created_at.strftime('%Y-%m-%d %H:%M') if o.created_at else '' }} ·
+                   <span dir="ltr">{{ o.order_number }}</span></small>
+            {% if o.status == 'cancelled' and o.cancel_reason %}
+            <small class="reason">سبب الإلغاء: {{ o.cancel_reason }}</small>
+            {% endif %}
+        </div>
+        <div class="mr-amount">{{ o.final_amount|currency }}</div>
+        <div class="mr-state">
+            <span class="mo-state s-{{ o.status }}">{{ STATUS_AR.get(o.status, o.status) }}</span>
+        </div>
+        <div class="mr-act">
+            {% if o.status == 'delivered' and o.restaurant and o.restaurant.is_open %}
+            <a href="{{ url_for('restaurant_menu', restaurant_id=o.restaurant_id) }}" class="btn btn-again">
+                <i class="fas fa-rotate-right"></i> اطلب مجدداً
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="mo-empty small">
+    <b>لا توجد طلبات سابقة بعد</b>
+    <p>أول طلب لك سيظهر هنا بعد تسليمه.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+function cancelOrder(orderId) {
+    const reason = prompt('سبب الإلغاء (اختياري):', '');
+    if (reason === null) return;
+    fetch(`/order/${orderId}/cancel`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    }).then(r => r.json())
+      .then(d => { if (d.success) location.reload(); else alert(d.error || 'تعذّر الإلغاء'); })
+      .catch(() => alert('تعذّر الاتصال بالخادم'));
+}
+</script>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.mo-head {
+    background: linear-gradient(135deg, #006633 0%, #00913f 100%); color: #fff;
+    border-radius: 20px; padding: 28px 30px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.mo-head h1 { font-weight: 800; font-size: 1.65rem; margin: 0 0 4px; }
+.mo-head p { margin: 0; color: rgba(255,255,255,.8); font-size: .92rem; }
+
+.mo-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 30px; }
+.mo-stats div { background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 18px; text-align: center; }
+.mo-stats b { display: block; font-size: 1.5rem; font-weight: 800; color: #12201a; }
+.mo-stats span { font-size: .82rem; color: #7b8c84; }
+
+.mo-sec { font-weight: 800; font-size: 1.25rem; color: #12201a; margin: 0 0 16px; }
+
+.mo-list { display: grid; gap: 16px; margin-bottom: 38px; }
+.mo-card {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 20px 22px;
+}
+.mo-card.live { border-inline-start: 4px solid #006633; }
+.mo-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.mo-top b { display: block; font-size: 1.08rem; font-weight: 700; color: #12201a; }
+.mo-top small { color: #9aaaa3; font-size: .78rem; }
+
+.mo-state { border-radius: 8px; padding: 5px 11px; font-size: .78rem; font-weight: 700; white-space: nowrap;
+            background: #eef4f0; color: #46564f; }
+.s-pending { background: #fff3e6; color: #b06a00; }
+.s-confirmed { background: #e6f1fb; color: #0b6ea8; }
+.s-ready { background: #e8f3ed; color: #006633; }
+.s-assigned, .s-picked_up, .s-delivering { background: #e6f7ee; color: #00733f; }
+.s-delivered { background: #e8f3ed; color: #006633; }
+.s-cancelled { background: #fdeef0; color: #b3121b; }
+
+.mo-steps { list-style: none; display: flex; padding: 0; margin: 0 0 18px; gap: 0; }
+.mo-steps li {
+    flex: 1; text-align: center; font-size: .72rem; color: #9aaaa3; position: relative;
+}
+.mo-steps li span {
+    display: block; width: 13px; height: 13px; border-radius: 50%; margin: 0 auto 7px;
+    background: #dfe8e3; position: relative; z-index: 1;
+}
+.mo-steps li::before {
+    content: ''; position: absolute; top: 6px; right: 50%; width: 100%; height: 2px; background: #e8efeb;
+}
+.mo-steps li:first-child::before { display: none; }
+.mo-steps li.done { color: #006633; font-weight: 700; }
+.mo-steps li.done span { background: #006633; }
+.mo-steps li.done::before { background: #006633; }
+
+.mo-rows { display: grid; gap: 7px; margin-bottom: 14px; }
+.mo-rows div { font-size: .89rem; color: #55665e; }
+.mo-rows i { color: #4fae7a; width: 18px; }
+.mo-rows a { color: #006633; }
+
+.mo-code {
+    background: #fff8e6; border: 1px dashed #e0b95a; border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.mo-code span { font-size: .85rem; color: #8a6a1a; font-weight: 600; }
+.mo-code b { font-size: 1.5rem; font-weight: 800; color: #12201a; letter-spacing: .18em; }
+
+.mo-acts { display: flex; gap: 9px; flex-wrap: wrap; }
+.btn-track { background: #006633; color: #fff; border-radius: 11px; padding: 10px 20px; font-weight: 700; font-size: .9rem; }
+.btn-track:hover { background: #004d26; color: #fff; }
+.btn-cancel { background: #fff; color: #b3121b; border: 1px solid #f0ccd0; border-radius: 11px;
+              padding: 10px 18px; font-weight: 600; font-size: .9rem; }
+.btn-cancel:hover { background: #b3121b; color: #fff; border-color: #b3121b; }
+
+.mo-past { background: #fff; border: 1px solid #e6ede9; border-radius: 16px; overflow: hidden; }
+.mo-row {
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: center;
+    padding: 15px 20px; border-bottom: 1px solid #f0f5f2;
+}
+.mo-row:last-child { border-bottom: 0; }
+.mo-row.cancelled { background: #fdfafa; }
+.mr-main b { display: block; font-size: .97rem; color: #12201a; font-weight: 600; }
+.mr-main small { display: block; color: #9aaaa3; font-size: .78rem; }
+.mr-main .reason { color: #b3121b; margin-top: 2px; }
+.mr-amount { font-weight: 700; color: #12201a; white-space: nowrap; }
+.btn-again { background: #f1f6f3; color: #006633; border: 1px solid #dfeae4; border-radius: 10px;
+             padding: 7px 14px; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.btn-again:hover { background: #006633; color: #fff; }
+
+.mo-empty {
+    background: #fff; border: 1px dashed #d5e2db; border-radius: 18px;
+    padding: 46px 24px; text-align: center; margin-bottom: 38px;
+}
+.mo-empty i { font-size: 2.4rem; color: #c3d3ca; display: block; margin-bottom: 14px; }
+.mo-empty b { display: block; font-size: 1.08rem; color: #33443c; margin-bottom: 6px; }
+.mo-empty p { color: #7b8c84; margin-bottom: 18px; font-size: .92rem; }
+.mo-empty.small { padding: 30px 20px; }
+.mo-empty.small p { margin-bottom: 0; }
+
+@media (max-width: 700px) {
+    .mo-stats { grid-template-columns: 1fr; }
+    .mo-row { grid-template-columns: 1fr auto; }
+    .mr-state, .mr-act { grid-column: span 2; }
+    .mo-steps li { font-size: .62rem; }
+}
+</style>
+{% endblock %}

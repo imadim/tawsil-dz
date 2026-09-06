@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}طلبات المطعم - {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="ro-head">
+    <div>
+        <h1>طلبات المطعم</h1>
+        <p>{{ restaurant.name_ar }} — سجل كامل لكل الطلبات</p>
+    </div>
+    <a href="{{ url_for('restaurant_reports') }}" class="btn btn-light btn-sm">
+        <i class="fas fa-chart-column"></i> أرباحي وتقاريري
+    </a>
+</div>
+
+<div class="ro-tabs">
+    <a href="{{ url_for('restaurant_orders') }}" class="{{ 'on' if not status }}">الكل <b>{{ counts.all }}</b></a>
+    <a href="{{ url_for('restaurant_orders', status='active') }}" class="{{ 'on' if status=='active' }}">جارية <b>{{ counts.active }}</b></a>
+    <a href="{{ url_for('restaurant_orders', status='delivered') }}" class="{{ 'on' if status=='delivered' }}">مسلّمة <b>{{ counts.delivered }}</b></a>
+    <a href="{{ url_for('restaurant_orders', status='cancelled') }}" class="{{ 'on' if status=='cancelled' }}">ملغاة <b>{{ counts.cancelled }}</b></a>
+</div>
+
+{% if orders %}
+<div class="tablewrap">
+<table class="ro-table">
+    <thead><tr>
+        <th>الطلب</th><th>الزبون</th><th>المحتوى</th><th>قيمة الطعام</th>
+        <th>صافيك</th><th>السائق</th><th>الحالة</th><th>التاريخ</th>
+    </tr></thead>
+    <tbody>
+    {% for o in orders %}
+    <tr class="{{ 'off' if o.status == 'cancelled' }}">
+        <td><small dir="ltr">{{ o.order_number }}</small></td>
+        <td>
+            <b>{{ o.customer.username if o.customer else '—' }}</b>
+            {% if o.customer %}<small dir="ltr">{{ o.customer.phone }}</small>{% endif %}
+        </td>
+        <td>
+            {% for i in o.items %}
+            <span class="it">{{ i.menu_item.name_ar if i.menu_item else 'صنف' }} ×{{ i.quantity }}</span>
+            {% endfor %}
+        </td>
+        <td class="nu">{{ o.total_amount|currency }}</td>
+        <td class="nu net">{{ (o.total_amount * (1 - (restaurant.commission_rate or 10) / 100))|round|int }} د.ج</td>
+        <td>{{ o.driver.username if o.driver else '—' }}</td>
+        <td><span class="ro-state s-{{ o.status }}">{{ STATUS_AR.get(o.status, o.status) }}</span></td>
+        <td><small>{{ o.created_at.strftime('%m-%d %H:%M') if o.created_at else '' }}</small></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="ro-empty">
+    <i class="fas fa-receipt"></i>
+    <b>لا توجد طلبات في هذا التصنيف</b>
+    <p>الطلبات الجديدة تظهر هنا فور وصولها.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.ro-head {
+    background: linear-gradient(135deg, #006633 0%, #00913f 100%); color: #fff;
+    border-radius: 20px; padding: 26px 30px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.ro-head h1 { font-weight: 800; font-size: 1.55rem; margin: 0 0 4px; }
+.ro-head p { margin: 0; color: rgba(255,255,255,.8); font-size: .9rem; }
+
+.ro-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.ro-tabs a {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 11px; padding: 9px 16px;
+    color: #55665e; text-decoration: none; font-size: .9rem; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.ro-tabs a b { background: #eef4f0; color: #33443c; border-radius: 6px; padding: 1px 8px; font-size: .78rem; }
+.ro-tabs a.on { background: #006633; border-color: #006633; color: #fff; }
+.ro-tabs a.on b { background: rgba(255,255,255,.22); color: #fff; }
+
+.tablewrap { overflow-x: auto; }
+.ro-table { width: 100%; background: #fff; border-collapse: collapse; border-radius: 16px; overflow: hidden; min-width: 860px; }
+.ro-table th { background: #12201a; color: #fff; font-size: .8rem; font-weight: 700; padding: 12px 14px; text-align: right; white-space: nowrap; }
+.ro-table td { padding: 12px 14px; border-bottom: 1px solid #f0f5f2; font-size: .88rem; color: #55665e; vertical-align: top; }
+.ro-table tr:hover td { background: #f9fbfa; }
+.ro-table tr.off td { opacity: .6; }
+.ro-table b { color: #12201a; display: block; }
+.ro-table small { color: #9aaaa3; font-size: .76rem; }
+.it { display: inline-block; background: #f1f6f3; border-radius: 6px; padding: 2px 8px; font-size: .78rem; margin: 0 0 3px 3px; }
+.nu { white-space: nowrap; font-weight: 600; color: #12201a; }
+.nu.net { color: #006633; }
+
+.ro-state { border-radius: 8px; padding: 4px 10px; font-size: .76rem; font-weight: 700; white-space: nowrap;
+            background: #eef4f0; color: #46564f; }
+.s-pending { background: #fff3e6; color: #b06a00; }
+.s-confirmed { background: #e6f1fb; color: #0b6ea8; }
+.s-ready, .s-assigned, .s-picked_up, .s-delivering { background: #e6f7ee; color: #00733f; }
+.s-delivered { background: #e8f3ed; color: #006633; }
+.s-cancelled { background: #fdeef0; color: #b3121b; }
+
+.ro-empty { background: #fff; border: 1px dashed #d5e2db; border-radius: 18px; padding: 48px 24px; text-align: center; }
+.ro-empty i { font-size: 2.3rem; color: #c3d3ca; display: block; margin-bottom: 14px; }
+.ro-empty b { display: block; color: #33443c; margin-bottom: 6px; }
+.ro-empty p { color: #7b8c84; margin: 0; font-size: .9rem; }
+</style>
+{% endblock %}

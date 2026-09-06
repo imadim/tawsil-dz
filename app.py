@@ -1106,6 +1106,130 @@ def customer_dashboard():
     return render_template('customer/dashboard.html', restaurants=restaurants, orders=orders)
 
 
+ACTIVE_STATUSES = ('pending', 'confirmed', 'ready', 'assigned', 'picked_up', 'delivering')
+
+
+@app.route('/my-orders')
+@login_required
+def my_orders():
+    """كل طلبات الزبون: الجارية والسابقة"""
+    if current_user.role != 'customer':
+        return redirect(url_for('index'))
+
+    all_orders = Order.query.filter_by(customer_id=current_user.id)\
+                            .order_by(Order.created_at.desc()).all()
+    active = [o for o in all_orders if o.status in ACTIVE_STATUSES]
+    past   = [o for o in all_orders if o.status not in ACTIVE_STATUSES]
+
+    spent = sum((o.final_amount or 0) for o in past if o.status == 'delivered')
+
+    return render_template('customer/orders.html',
+                           active_orders=active, past_orders=past,
+                           total_spent=spent,
+                           delivered_count=len([o for o in past if o.status == 'delivered']))
+
+
+@app.route('/restaurant/orders')
+@login_required
+def restaurant_orders():
+    """كل طلبات المطعم مع تصفية بالحالة"""
+    if current_user.role != 'restaurant':
+        return redirect(url_for('index'))
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest:
+        flash('أكمل بيانات مطعمك أولاً', 'warning')
+        return redirect(url_for('index'))
+
+    status = request.args.get('status') or ''
+    q = Order.query.filter_by(restaurant_id=rest.id)
+    if status == 'active':
+        q = q.filter(Order.status.in_(ACTIVE_STATUSES))
+    elif status in ('delivered', 'cancelled'):
+        q = q.filter_by(status=status)
+    orders = q.order_by(Order.created_at.desc()).limit(200).all()
+
+    return render_template('restaurant/orders.html',
+                           restaurant=rest, orders=orders, status=status,
+                           counts={
+                               'all':       Order.query.filter_by(restaurant_id=rest.id).count(),
+                               'active':    Order.query.filter_by(restaurant_id=rest.id)
+                                                 .filter(Order.status.in_(ACTIVE_STATUSES)).count(),
+                               'delivered': Order.query.filter_by(restaurant_id=rest.id, status='delivered').count(),
+                               'cancelled': Order.query.filter_by(restaurant_id=rest.id, status='cancelled').count(),
+                           })
+
+
+@app.route('/restaurant/reports')
+@login_required
+def restaurant_reports():
+    """أرباح المطعم، زبائنه الأوفياء، والسائقون الأكثر توصيلاً له"""
+    if current_user.role != 'restaurant':
+        return redirect(url_for('index'))
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest:
+        flash('أكمل بيانات مطعمك أولاً', 'warning')
+        return redirect(url_for('index'))
+
+    from datetime import timedelta
+    now        = datetime.utcnow()
+    day_start  = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start= now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    rate       = (rest.commission_rate or 10.0) / 100.0
+
+    delivered = Order.query.filter_by(restaurant_id=rest.id, status='delivered').all()
+
+    def money(rows):
+        gross = sum((o.total_amount or 0) for o in rows)
+        return {'orders': len(rows), 'gross': gross,
+                'commission': gross * rate, 'net': gross * (1 - rate)}
+
+    today_rows = [o for o in delivered if o.delivered_at and o.delivered_at >= day_start]
+    month_rows = [o for o in delivered if o.delivered_at and o.delivered_at >= month_start]
+
+    # ── مبيعات آخر 14 يوماً للرسم البياني ──
+    daily = []
+    for i in range(13, -1, -1):
+        d0 = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+        d1 = d0 + timedelta(days=1)
+        rows = [o for o in delivered if o.delivered_at and d0 <= o.delivered_at < d1]
+        daily.append({'label': d0.strftime('%d/%m'),
+                      'gross': sum((o.total_amount or 0) for o in rows),
+                      'orders': len(rows)})
+
+    # ── الزبائن الأوفياء ──
+    by_customer = {}
+    for o in delivered:
+        e = by_customer.setdefault(o.customer_id, {'orders': 0, 'spent': 0.0, 'last': None, 'user': o.customer})
+        e['orders'] += 1
+        e['spent']  += (o.total_amount or 0)
+        if not e['last'] or (o.delivered_at and o.delivered_at > e['last']):
+            e['last'] = o.delivered_at
+    loyal = sorted(by_customer.values(), key=lambda x: (-x['orders'], -x['spent']))[:8]
+
+    # ── السائقون الموثوقون ──
+    by_driver = {}
+    for o in delivered:
+        if not o.driver_id:
+            continue
+        e = by_driver.setdefault(o.driver_id, {'orders': 0, 'fees': 0.0, 'last': None, 'user': o.driver})
+        e['orders'] += 1
+        e['fees']   += (o.delivery_fee or 0)
+        if not e['last'] or (o.delivered_at and o.delivered_at > e['last']):
+            e['last'] = o.delivered_at
+    # نسبة الإتمام: كم طلباً قبله السائق من هذا المطعم مقابل ما أتمّه
+    for did, e in by_driver.items():
+        taken = Order.query.filter_by(restaurant_id=rest.id, driver_id=did)\
+                           .filter(Order.status != 'cancelled').count()
+        e['rate'] = round(100.0 * e['orders'] / taken) if taken else 100
+    trusted = sorted(by_driver.values(), key=lambda x: (-x['orders'], -x['rate']))[:8]
+
+    return render_template('restaurant/reports.html',
+                           restaurant=rest,
+                           today=money(today_rows), month=money(month_rows), total=money(delivered),
+                           daily=daily, loyal=loyal, trusted=trusted,
+                           commission_rate=rest.commission_rate or 10.0)
+
+
 @app.route('/restaurant/<int:restaurant_id>/menu')
 @login_required
 def restaurant_menu(restaurant_id):

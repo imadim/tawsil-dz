@@ -34,20 +34,24 @@
                 <i class="fas fa-plus"></i>
                 <span><strong>إضافة طبق</strong><small>أضف صنفاً جديداً</small></span>
             </a>
+            <a href="{{ url_for('restaurant_reports') }}" class="ra-btn">
+                <i class="fas fa-chart-column"></i>
+                <span><strong>أرباحي</strong><small>اليوم والشهر وزبائني</small></span>
+            </a>
+            <a href="{{ url_for('restaurant_orders') }}" class="ra-btn">
+                <i class="fas fa-receipt"></i>
+                <span><strong>كل الطلبات</strong><small>السجل الكامل</small></span>
+            </a>
             <a href="{{ url_for('restaurant_profile', restaurant_id=restaurant.id) }}" class="ra-btn">
                 <i class="fas fa-store"></i>
                 <span><strong>صفحة مطعمي</strong><small>كما يراها الزبون</small></span>
-            </a>
-            <a href="{{ url_for('guide_download', role='restaurant') }}" target="_blank" class="ra-btn">
-                <i class="fas fa-book-open"></i>
-                <span><strong>دليل المطعم</strong><small>شرح مختصر</small></span>
             </a>
         </div>
     </div>
 </div>
 
 <style>
-.rest-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.rest-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .ra-btn {
     display: flex; align-items: center; gap: 13px; text-decoration: none;
     background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 16px 18px;
@@ -61,7 +65,8 @@
 .ra-main { background: #006633; border-color: #006633; color: #fff; }
 .ra-main:hover { background: #004d26; color: #fff; }
 .ra-main i, .ra-main small { color: rgba(255,255,255,.85); }
-@media (max-width: 991px) { .rest-actions { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 1199px) { .rest-actions { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 767px) { .rest-actions { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 575px) { .rest-actions { grid-template-columns: 1fr; } }
 </style>
 

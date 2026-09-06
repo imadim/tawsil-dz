@@ -3,6 +3,8 @@
 {% block title %}لوحة الزبون - توصيل DZ{% endblock %}
 
 {% block content %}
+{% set ACTIVE = ['pending','confirmed','ready','assigned','picked_up','delivering'] %}
+{% set active_orders = orders|selectattr('status', 'in', ACTIVE)|list %}
 <div class="row mb-4">
     <div class="col-12">
         <div class="card bg-gradient" style="background: linear-gradient(135deg, #006633 0%, #008844 100%);">
@@ -38,17 +40,19 @@
         <div class="card bg-warning text-white">
             <div class="card-body text-center">
                 <i class="fas fa-clock fa-2x mb-2"></i>
-                <h5>طلبيات نشطة</h5>
-                <h2>{{ orders|rejectattr('status', 'equalto', 'delivered')|list|length }}</h2>
+                <h5>طلبات جارية</h5>
+                <h2>{{ active_orders|length }}</h2>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Active Orders -->
-{% set active_orders = orders|rejectattr('status', 'equalto', 'delivered')|list %}
 {% if active_orders %}
-<h4 class="mb-3"><i class="fas fa-fire"></i> طلبياتك النشطة</h4>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-fire"></i> طلباتك الجارية</h4>
+    <a href="{{ url_for('my_orders') }}" class="btn btn-sm btn-outline-primary">كل طلباتي</a>
+</div>
 <div class="row mb-4">
     {% for order in active_orders %}
     <div class="col-lg-6 mb-3">
@@ -122,6 +126,14 @@
 {% endif %}
 
 <!-- Available Restaurants -->
+{% if not active_orders %}
+<div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <span><i class="fas fa-bag-shopping text-success"></i>
+          لا يوجد طلب جارٍ الآن{% if orders %} — لديك {{ orders|length }} طلب في السجل{% endif %}.</span>
+    <a href="{{ url_for('my_orders') }}" class="btn btn-sm btn-success">عرض كل طلباتي</a>
+</div>
+{% endif %}
+
 <h4 class="mb-3"><i class="fas fa-utensils"></i> المطاعم المتاحة</h4>
 <div class="row">
     {% if restaurants %}
