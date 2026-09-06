@@ -9,7 +9,6 @@
     <div class="rg-inner">
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="توصيل DZ" class="rg-logo">
         <h2>مرحبا بيك في توصيل DZ</h2>
-        <p>اختار واش راك تدير، ونوريولك غير واش يهمّك</p>
 
         <div class="rg-cards">
             <button type="button" class="rg-card" data-pick="customer">
@@ -29,7 +28,12 @@
             </button>
         </div>
 
-        <button type="button" class="rg-skip" data-pick="all">نشوف كل شي</button>
+        <div class="rg-foot">
+            <button type="button" class="rg-skip" data-pick="all">التطبيق كاملا</button>
+            <button type="button" class="rg-install" onclick="installApp()">
+                <i class="fas fa-mobile-screen-button"></i> ثبّت التطبيق على هاتفك
+            </button>
+        </div>
     </div>
 </div>
 
@@ -551,6 +555,14 @@
     border-radius: 999px; padding: 9px 22px; font-family: inherit; font-size: .9rem; cursor: pointer;
 }
 .rg-skip:hover { background: rgba(255,255,255,.14); }
+.rg-foot { display: flex; gap: 11px; justify-content: center; flex-wrap: wrap; }
+.rg-install {
+    background: #fff; border: 0; color: #12201a; border-radius: 999px;
+    padding: 9px 22px; font-family: inherit; font-size: .9rem; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+}
+.rg-install i { color: #006633; }
+.rg-install:hover { background: #eaf4ee; }
 
 .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .role-switch {
