@@ -59,7 +59,7 @@ python app.py
 1. اربط المستودع من [render.com](https://render.com) → New → Blueprint
 2. سيقرأ `render.yaml` وينشئ الخدمة وقاعدة PostgreSQL تلقائياً
 3. أضف متغيرات البيئة الناقصة (`GOOGLE_MAPS_API_KEY` وغيرها)
-4. بعد أول نشر، شغّل مرة واحدة من الـ Shell: `python init_db.py`
+4. تُنشأ الجداول والبيانات التجريبية تلقائياً عند أول تشغيل
 
 ### متغيرات البيئة المطلوبة
 

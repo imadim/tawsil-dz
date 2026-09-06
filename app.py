@@ -1560,6 +1560,20 @@ def utility_processor():
 # ============================================
 
 
+# ============================================
+# AUTO-INIT ON SERVER (Render / Railway / gunicorn)
+# ============================================
+# عند التشغيل عبر gunicorn لا يُنفَّذ بلوك __main__، لذا ننشئ الجداول هنا.
+# العملية آمنة ومتكررة: init_database تتحقق من وجود البيانات قبل إضافتها.
+
+if os.environ.get('DATABASE_URL') and os.environ.get('AUTO_INIT_DB', '1') == '1':
+    try:
+        init_database()
+        print("✅ Database initialized on startup")
+    except Exception as _e:
+        print(f"⚠️  Database init skipped: {_e}")
+
+
 if __name__ == '__main__':
     init_database()
     
