@@ -141,6 +141,8 @@ class Order(db.Model):
     
     payment_method = db.Column(db.String(20), nullable=False, index=True)
     payment_status = db.Column(db.String(20), default='pending', index=True)
+    cancelled_by = db.Column(db.String(20))
+    cancel_reason = db.Column(db.String(200))
     
     verification_code = db.Column(db.String(6), index=True)
     is_verified = db.Column(db.Boolean, default=False)

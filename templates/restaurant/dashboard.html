@@ -93,7 +93,7 @@
                 <i class="fas fa-check-circle fa-3x mb-3"></i>
                 <h6>تم التسليم</h6>
                 <h2>{{ completed_count }}</h2>
-                <small>لاتوجد طلبيات </small>
+                <small>لا توجد طلبيات </small>
             </div>
         </div>
     </div>
@@ -204,9 +204,10 @@
                             </div>
                             <span class="badge bg-{{ 'warning' if order.status == 'confirmed' else 'success' if order.status == 'ready' else 'info' }}">
                                 {% if order.status == 'confirmed' %}⏳ قيد التحضير
-                                {% elif order.status == 'ready' %}✅ جاهزة
-                                {% elif order.status == 'picked_up' %}🚗 السائق أخذها
-                                {% elif order.status == 'delivering' %}🏍️ في الطريق
+                                {% elif order.status == 'ready' %}✅ جاهز — ننتظر سائقاً
+                                {% elif order.status == 'assigned' %}🛵 السائق في الطريق إليك
+                                {% elif order.status in ['picked_up', 'delivering'] %}🏍️ خرج للزبون
+                                {% elif order.status == 'cancelled' %}❌ ملغى
                                 {% endif %}
                             </span>
                         </div>
@@ -234,12 +235,22 @@
                         </div>
                         
                         {% if order.status == 'confirmed' %}
-                        <button class="btn btn-success w-100 mark-ready-btn" data-order-id="{{ order.id }}">
-                            <i class="fas fa-check-double"></i> الطلبية جاهزة
+                        <button class="btn btn-success w-100 mark-ready-btn mb-2" data-order-id="{{ order.id }}">
+                            <i class="fas fa-check-double"></i> الطلب جاهز
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm w-100" onclick="cancelOrder({{ order.id }})">
+                            <i class="fas fa-xmark"></i> تعذّر التحضير — إلغاء
                         </button>
                         {% elif order.status == 'ready' %}
-                        <div class="alert alert-success mb-0">
-                            <i class="fas fa-clock"></i> في انتظار السائق
+                        <div class="alert alert-success mb-2">
+                            <i class="fas fa-clock"></i> في انتظار سائق
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm w-100" onclick="cancelOrder({{ order.id }})">
+                            <i class="fas fa-xmark"></i> إلغاء الطلب
+                        </button>
+                        {% elif order.status == 'assigned' %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-motorcycle"></i> السائق {{ order.driver.username if order.driver else '' }} في طريقه إليك
                         </div>
                         {% elif order.status in ['picked_up', 'delivering'] %}
                         <div class="alert alert-info mb-0">
@@ -259,7 +270,7 @@
 <div class="card">
     <div class="card-body text-center py-5">
         <i class="fas fa-inbox fa-5x text-muted mb-4"></i>
-        <h4>لاتوجد طلبيات الآن</h4>
+        <h4>لا توجد طلبيات الآن</h4>
         <p class="text-muted">نعلمك اذا وجدت طلبية جديدة</p>
     </div>
 </div>
@@ -329,6 +340,19 @@ function rejectOrder(orderId) {
             }
         });
     }
+}
+
+function cancelOrder(orderId) {
+    const reason = prompt('سبب الإلغاء (يراه الزبون):', '');
+    if (reason === null) return;
+    fetch(`/order/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) location.reload(); else alert(d.error || 'تعذّر الإلغاء'); })
+    .catch(() => alert('تعذّر الاتصال بالخادم'));
 }
 
 function markReady(orderId) {

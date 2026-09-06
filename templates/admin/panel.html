@@ -129,7 +129,7 @@
         <table class="ap-table">
             <thead><tr>
                 <th>رقم الطلب</th><th>الزبون</th><th>المطعم</th><th>السائق</th>
-                <th>المبلغ</th><th>التوصيل</th><th>الحالة</th><th>التاريخ</th>
+                <th>المبلغ</th><th>التوصيل</th><th>الحالة</th><th>التاريخ</th><th></th>
             </tr></thead>
             <tbody>
             {% for o in orders %}
@@ -140,11 +140,18 @@
                 <td>{{ o.driver.username if o.driver else '—' }}</td>
                 <td>{{ o.total_amount|currency }}</td>
                 <td>{{ o.delivery_fee|currency }}</td>
-                <td><span class="st st-{{ o.status }}">{{ o.status }}</span></td>
+                <td><span class="st st-{{ o.status }}">{{ STATUS_AR.get(o.status, o.status) }}</span></td>
                 <td><small>{{ o.created_at.strftime('%m-%d %H:%M') if o.created_at else '—' }}</small></td>
+                <td class="acts">
+                    {% if o.status in ['pending', 'confirmed', 'ready', 'assigned'] %}
+                    <button class="ic danger" title="إلغاء" onclick="adminCancel({{ o.id }})">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                    {% endif %}
+                </td>
             </tr>
             {% else %}
-            <tr><td colspan="8" class="empty">لا توجد طلبات</td></tr>
+            <tr><td colspan="9" class="empty">لا توجد طلبات</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -243,6 +250,24 @@
 {% endblock %}
 
 
+{% block extra_js %}
+<script>
+function adminCancel(orderId) {
+    const reason = prompt('سبب الإلغاء (يصل لكل الأطراف):', '');
+    if (reason === null) return;
+    fetch(`/order/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(r => r.json())
+    .then(d => { if (d.success) location.reload(); else alert(d.error || 'تعذّر الإلغاء'); })
+    .catch(() => alert('تعذّر الاتصال بالخادم'));
+}
+</script>
+{% endblock %}
+
+
 {% block extra_css %}
 <style>
 .ap-head {
@@ -297,6 +322,7 @@
     width: 32px; height: 32px; border-radius: 9px; background: #f1f6f3; color: #33443c;
     margin-left: 4px; text-decoration: none; font-size: .82rem;
 }
+.ic { border: 0; font-family: inherit; cursor: pointer; }
 .ic:hover { background: #006633; color: #fff; }
 .ic.danger:hover { background: #D21034; color: #fff; }
 

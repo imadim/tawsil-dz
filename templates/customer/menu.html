@@ -183,11 +183,18 @@
                             <i class="fas fa-credit-card"></i> اختر طريقة الدفع *
                         </label>
                         <select class="form-select" id="paymentMethod" required>
-                            <option value="cash">💵 كاش (نقداً)</option>
+                            <option value="cash">💵 نقداً عند الاستلام</option>
+                            <!-- الدفع بالبطاقة معطّل حتى يكتمل التكامل مع بوابة SATIM/CIB.
+                                 لا تُفعّله قبل ذلك: الطلب يُسجَّل دون أن يُخصم أي مبلغ فعلياً.
                             <option value="cib_card">💳 بطاقة CIB</option>
                             <option value="edahabia">💳 الذهبية Edahabia</option>
+                            -->
                         </select>
                     </div>
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-circle-info"></i>
+                        الدفع بالبطاقة قيد التفعيل — حالياً الدفع نقداً عند استلام الطلب.
+                    </p>
                     <div id="cardPaymentFields" style="display:none;">
                         <div class="card border-primary mb-3">
                             <div class="card-header bg-light">

@@ -36,6 +36,10 @@ except:
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# مفتاح الجلسات: لا نقبل القيمة الاحتياطية في الإنتاج
+if os.environ.get('FLASK_ENV') == 'production' and not os.environ.get('SECRET_KEY'):
+    raise RuntimeError('SECRET_KEY غير مضبوط — لا يمكن التشغيل في الإنتاج بمفتاح افتراضي')
+
 db.init_app(app)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
@@ -47,6 +51,28 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+
+# ── حدّ محاولات الدخول: خمس محاولات فاشلة لكل عنوان في خمس دقائق ──
+_login_attempts = {}
+LOGIN_MAX_TRIES = 5
+LOGIN_WINDOW    = 300  # ثانية
+
+
+def login_throttled(key):
+    """هل تجاوز هذا العنوان عدد المحاولات المسموح؟"""
+    import time
+    now = time.time()
+    tries = [t for t in _login_attempts.get(key, []) if now - t < LOGIN_WINDOW]
+    _login_attempts[key] = tries
+    return len(tries) >= LOGIN_MAX_TRIES
+
+
+def record_login_failure(key):
+    import time
+    _login_attempts.setdefault(key, []).append(time.time())
+    if len(_login_attempts) > 5000:      # تنظيف بسيط للذاكرة
+        _login_attempts.clear()
 
 
 def admin_required(f):
@@ -88,7 +114,7 @@ def upload_restaurant_image(restaurant_id):
     restaurant = Restaurant.query.get_or_404(restaurant_id)
 
     if 'image' not in request.files:
-        flash('لاتوجد صورة', 'danger')
+        flash('لا توجد صورة', 'danger')
         return redirect(url_for('admin_dashboard'))
 
     file = request.files['image']
@@ -174,6 +200,19 @@ CUISINES = [
 ]
 
 DEFAULT_CUISINE = "أخرى"
+
+# أسماء الحالات بالعربية — مصدر واحد لكل الواجهات
+STATUS_AR = {
+    'pending':    'بانتظار المطعم',
+    'confirmed':  'قيد التحضير',
+    'ready':      'جاهز',
+    'assigned':   'سائق في الطريق للمطعم',
+    'picked_up':  'في الطريق للزبون',
+    'delivering': 'في الطريق للزبون',
+    'delivered':  'تم التسليم',
+    'completed':  'مكتمل',
+    'cancelled':  'ملغى',
+}
 
 
 # ============================================
@@ -283,13 +322,16 @@ def ensure_schema():
             for table, col, ddl, default in [
                 ('menu_items', 'rating',        'FLOAT',   '0'),
                 ('menu_items', 'total_reviews', 'INTEGER', '0'),
+                ('orders',     'cancelled_by',  'VARCHAR(20)',  'NULL'),
+                ('orders',     'cancel_reason', 'VARCHAR(200)', 'NULL'),
             ]:
                 if table in insp.get_table_names():
                     existing = {c['name'] for c in insp.get_columns(table)}
                     if col not in existing:
                         with db.engine.begin() as conn:
                             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
-                            conn.execute(text(f"UPDATE {table} SET {col} = {default} WHERE {col} IS NULL"))
+                            if default != 'NULL':
+                                conn.execute(text(f"UPDATE {table} SET {col} = {default} WHERE {col} IS NULL"))
                         print(f"✅ عمود {col} أُضيف إلى {table}")
 
             cols = {c['name'] for c in insp.get_columns('restaurants')}
@@ -699,7 +741,8 @@ def admin_toggle_restaurant(r_id):
 @app.context_processor
 def inject_lists():
     """الولايات والتصنيفات متاحة في كل القوالب"""
-    return dict(WILAYAS=WILAYAS, WILAYA_NAMES=WILAYA_NAMES, CUISINES=CUISINES)
+    return dict(WILAYAS=WILAYAS, WILAYA_NAMES=WILAYA_NAMES, CUISINES=CUISINES,
+                STATUS_AR=STATUS_AR)
 
 
 @app.route('/')
@@ -730,9 +773,14 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        
+
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '?').split(',')[0].strip()
+        if login_throttled(ip):
+            flash('محاولات كثيرة. انتظر خمس دقائق ثم أعد المحاولة', 'danger')
+            return render_template('login.html')
+
         user = User.query.filter_by(email=email).first()
-        
+
         if user and user.check_password(password):
             if not user.is_active:
                 flash('حسابك معطل. راسل المدير', 'danger')
@@ -748,10 +796,11 @@ def login():
             elif user.role == 'restaurant':
                 return redirect(url_for('restaurant_dashboard'))
             elif user.role == 'admin':
-                return redirect(request.referrer or url_for('admin_panel'))
+                return redirect(url_for('admin_panel'))
         else:
-            flash('إيميل أو كلمة السر خاطئة', 'danger')
-    
+            record_login_failure(ip)
+            flash('البريد الإلكتروني أو كلمة السر غير صحيحة', 'danger')
+
     return render_template('login.html')
 
 # ============================================
@@ -1068,7 +1117,7 @@ def create_order():
     )
 
     order = Order(
-        order_number=f'DZ{datetime.now().strftime("%Y%m%d%H%M%S")}',
+        order_number=generate_order_number(),
         customer_id=current_user.id,
         restaurant_id=data['restaurant_id'],
         delivery_address=data['delivery_address'],
@@ -1120,7 +1169,7 @@ def create_order():
         'order_id': order.id,
         'order_number': order.order_number,
         'verification_code': verification_code,
-        'message': f'الطلبية تمت بنجاح! الكود الخاص بك: {verification_code}'
+        'message': f'تم تسجيل طلبك بنجاح. كود الاستلام: {verification_code}'
     })
 
 # ============================================
@@ -1176,11 +1225,16 @@ def driver_dashboard():
     
     available_orders = Order.query.filter_by(status='ready', driver_id=None).all()
     active_orders = Order.query.filter_by(driver_id=current_user.id).filter(
-        Order.status.in_(['picked_up', 'delivering'])
+        Order.status.in_(['assigned', 'picked_up', 'delivering'])
     ).all()
     
     completed_orders = Order.query.filter_by(driver_id=current_user.id, status='delivered').all()
-    total_earnings = sum(o.delivery_fee for o in completed_orders)
+    wallet = Wallet.query.filter_by(user_id=current_user.id).first()
+    # الرصيد المسجَّل هو المرجع، والحساب اللحظي احتياط للطلبات السابقة لتفعيل المحفظة
+    total_earnings = max(
+        (wallet.total_earned or 0.0) if wallet else 0.0,
+        sum(o.delivery_fee for o in completed_orders)
+    )
     
     return render_template('driver/dashboard.html',
                          available_orders=available_orders,
@@ -1209,52 +1263,74 @@ def toggle_availability():
 @login_required
 def accept_order(order_id):
     if current_user.role != 'driver':
-        return jsonify({'error': 'ماعنلا تملك الصلاحية'}), 403
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
     
     order = Order.query.get_or_404(order_id)
-    
-    if order.driver_id:
-        return jsonify({'error': 'الطلبية محجوزة'}), 400
-    
-    order.driver_id = current_user.id
-    order.status = 'picked_up'
+
+    if order.status != 'ready':
+        return jsonify({'error': 'الطلب غير متاح للقبول'}), 400
+
+    # إسناد ذرّي: يمنع سائقَين من أخذ الطلب نفسه في اللحظة ذاتها
+    updated = Order.query.filter(
+        Order.id == order_id,
+        Order.driver_id.is_(None),
+        Order.status == 'ready'
+    ).update(
+        {'driver_id': current_user.id, 'status': 'assigned'},
+        synchronize_session=False
+    )
     db.session.commit()
-    
+
+    if not updated:
+        return jsonify({'error': 'سبقك سائق آخر إلى هذا الطلب'}), 409
+
+    db.session.refresh(order)
+
     create_notification(
         order.customer_id,
-        '🚗 السائق في الطريق ',
-        f'السائق {current_user.username} استلم طلبيتك',
+        '🛵 سائق قبل طلبك',
+        f'السائق {current_user.username} في طريقه إلى المطعم لاستلام طلبك',
         order.id
     )
     
     socketio.emit('order_update', {
         'order_id': order.id,
-        'status': 'picked_up',
+        'status': 'assigned',
         'driver_name': current_user.username
     }, room=f'order_{order.id}')
-    
-    return jsonify({'success': True, 'message': 'قبلت الطلبية'})
+
+    return jsonify({'success': True, 'message': 'قبلت الطلب — توجّه إلى المطعم'})
 
 
 @app.route('/driver/start_delivery/<int:order_id>', methods=['POST'])
 @login_required
 def start_delivery(order_id):
+    """السائق استلم الطلب من المطعم وانطلق إلى الزبون"""
     order = Order.query.get_or_404(order_id)
-    
+
     if order.driver_id != current_user.id:
         return jsonify({'error': 'لا تملك الصلاحية'}), 403
-    
-    order.status = 'delivering'
+
+    if order.status != 'assigned':
+        return jsonify({'error': 'لا يمكن بدء التوصيل في هذه الحالة'}), 400
+
+    order.status = 'picked_up'
     db.session.commit()
-    
+
     create_notification(
         order.customer_id,
-        '🏍️ الطلبية في الطريق',
-        f'السائق {current_user.username} في طريقه اليك ',
+        '🚗 طلبك في الطريق إليك',
+        f'السائق {current_user.username} استلم طلبك من المطعم',
         order.id
     )
-    
-    return jsonify({'success': True})
+
+    socketio.emit('order_update', {
+        'order_id': order.id,
+        'status': 'picked_up',
+        'driver_name': current_user.username
+    }, room=f'order_{order.id}')
+
+    return jsonify({'success': True, 'message': 'انطلقت — الزبون يتابعك على الخريطة'})
 
 
 @app.route('/driver/complete_delivery/<int:order_id>', methods=['POST'])
@@ -1267,7 +1343,7 @@ def complete_delivery(order_id):
         return jsonify({'error': 'لا تملك الصلاحية'}), 403
     
     if data.get('code') != order.verification_code:
-        return jsonify({'error': '❌ الكود خاطئ '}), 400
+        return jsonify({'error': 'كود الاستلام غير صحيح'}), 400
     
     order.is_verified = True
     order.status = 'delivered'
@@ -1275,17 +1351,26 @@ def complete_delivery(order_id):
     order.payment_status = 'completed'
     
     db.session.commit()
+
+    # قيد أرباح السائق في محفظته
+    wallet = Wallet.query.filter_by(user_id=current_user.id).first()
+    if not wallet:
+        wallet = Wallet(user_id=current_user.id, balance=0.0, total_earned=0.0)
+        db.session.add(wallet)
+    wallet.balance = (wallet.balance or 0.0) + (order.delivery_fee or 0.0)
+    wallet.total_earned = (wallet.total_earned or 0.0) + (order.delivery_fee or 0.0)
+    db.session.commit()
     
     create_notification(
         order.customer_id,
-        '✅ وصلت الطلبية',
-        'طلبيتك وصلت.!',
+        '✅ وصل طلبك',
+        'تم تسليم طلبك. بالهناء والشفاء',
         order.id
     )
     
     return jsonify({
         'success': True,
-        'message': f'✅ تمت! اضافة {format_currency(order.delivery_fee)} للحساب '
+        'message': f'تم التسليم — أُضيف {format_currency(order.delivery_fee)} إلى رصيدك'
     })
 
 
@@ -1324,7 +1409,7 @@ def restaurant_dashboard():
     restaurant = Restaurant.query.filter_by(user_id=current_user.id).first()
     
     if not restaurant:
-        flash('يجب اكمال المطعم', 'warning')
+        flash('أكمل بيانات مطعمك أولاً', 'warning')
         return redirect(url_for('index'))
     
     pending_orders = Order.query.filter_by(
@@ -1333,7 +1418,7 @@ def restaurant_dashboard():
     ).order_by(Order.created_at.desc()).all()
     
     active_orders = Order.query.filter_by(restaurant_id=restaurant.id).filter(
-        Order.status.in_(['confirmed', 'ready', 'picked_up', 'delivering'])
+        Order.status.in_(['confirmed', 'ready', 'assigned', 'picked_up', 'delivering'])
     ).all()
     
     completed_orders = Order.query.filter_by(
@@ -1687,63 +1772,6 @@ def admin_upload_menu_image(item_id):
 # location tracking routes
 # ============================================
 
-@socketio.on('join_order')
-def handle_join_order(data):
-    if current_user.is_authenticated:
-        order_id = data['order_id']
-        order = Order.query.get(order_id)
-        
-        if order and (
-            current_user.id == order.customer_id or
-            current_user.id == order.driver_id or
-            current_user.role == 'admin'
-        ):
-            join_room(f'order_{order_id}')
-            emit('joined_order', {
-                'order_id': order_id,
-                'status': order.status
-            })
-            print(f"✅ {current_user.username} joined order room {order_id}")
-
-
-@app.route('/driver/update_location', methods=['POST'])
-@login_required
-def update_driver_location():
-    if current_user.role != 'driver':
-        return jsonify({'error': 'Access denied'}), 403
-    
-    data = request.json
-    lat = data.get('lat')
-    lng = data.get('lng')
-    
-    # Update driver's current location
-    current_user.current_lat = lat
-    current_user.current_lng = lng
-    db.session.commit()
-    
-    # Broadcast to all active orders
-    active_orders = Order.query.filter_by(
-        driver_id=current_user.id
-    ).filter(Order.status.in_(['picked_up', 'delivering'])).all()
-    
-    for order in active_orders:
-        socketio.emit('driver_location', {
-            'lat': lat,
-            'lng': lng,
-            'driver_name': current_user.username
-        }, room=f'order_{order.id}')
-    
-    return jsonify({
-        'success': True,
-        'message': 'Location updated',
-        'active_orders': len(active_orders)
-    })
-
-
-
-
-# This serves firebase-messaging-sw.js from /
-# Firebase REQUIRES it to be at root level
 @app.route('/firebase-messaging-sw.js')
 def firebase_sw():
     return send_from_directory(
@@ -1762,6 +1790,10 @@ def firebase_sw():
 @login_required
 def api_order_info(order_id):
     order = Order.query.filter((Order.id == order_id) | (Order.order_number == order_id)).first_or_404()
+
+    # لا يقرأ الطلب إلا أطرافه: الزبون، صاحب المطعم، السائق المسنَد، أو المشرف
+    if not user_may_see_order(order):
+        return jsonify({'error': 'لا تملك صلاحية الاطلاع على هذا الطلب'}), 403
     
     driver_location = None
     if order.driver:
@@ -1925,6 +1957,100 @@ def pwa_manifest():
     response = send_from_directory('static', 'manifest.json')
     response.headers['Content-Type'] = 'application/manifest+json; charset=utf-8'
     return response
+
+
+def generate_order_number():
+    """رقم طلب فريد — الدقة بالثانية وحدها كانت تُسقط أي طلبين في اللحظة نفسها"""
+    import secrets
+    stamp = datetime.now().strftime('%y%m%d%H%M%S')
+    for _ in range(6):
+        num = f"DZ{stamp}{secrets.randbelow(9000) + 1000}"
+        if not Order.query.filter_by(order_number=num).first():
+            return num
+    return f"DZ{stamp}{secrets.token_hex(3).upper()}"
+
+
+def user_may_see_order(order):
+    """هل يحقّ للمستخدم الحالي الاطلاع على هذا الطلب؟"""
+    if not current_user.is_authenticated:
+        return False
+    if current_user.role == 'admin':
+        return True
+    if order.customer_id == current_user.id:
+        return True
+    if order.driver_id and order.driver_id == current_user.id:
+        return True
+    if current_user.role == 'restaurant':
+        rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+        if rest and order.restaurant_id == rest.id:
+            return True
+    return False
+
+
+# الحالات التي يجوز فيها الإلغاء لكل دور
+CANCELLABLE = {
+    'customer':   ('pending', 'confirmed'),
+    'restaurant': ('pending', 'confirmed', 'ready'),
+    'admin':      ('pending', 'confirmed', 'ready', 'assigned'),
+}
+
+
+@app.route('/order/<int:order_id>/cancel', methods=['POST'])
+@login_required
+def cancel_order(order_id):
+    """إلغاء طلب — للزبون قبل التحضير، وللمطعم قبل خروجه، وللمشرف في أي حالة قبل الاستلام"""
+    order = Order.query.get_or_404(order_id)
+
+    if not user_may_see_order(order):
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
+
+    role = current_user.role
+    if role == 'driver':
+        return jsonify({'error': 'السائق لا يلغي الطلب — تواصل مع الإدارة'}), 403
+
+    allowed = CANCELLABLE.get(role, ())
+    if order.status not in allowed:
+        msg = {
+            'pending':   'الطلب قيد المراجعة',
+            'confirmed': 'المطعم بدأ التحضير',
+            'ready':     'الطلب جاهز وينتظر سائقاً',
+            'assigned':  'السائق في طريقه إلى المطعم',
+            'picked_up': 'الطلب في الطريق إليك',
+            'delivering':'الطلب في الطريق إليك',
+            'delivered': 'الطلب سُلّم بالفعل',
+            'cancelled': 'الطلب ملغى بالفعل',
+        }.get(order.status, order.status)
+        return jsonify({'error': f'لا يمكن الإلغاء الآن — {msg}'}), 400
+
+    reason = (request.json or {}).get('reason', '') if request.is_json else request.form.get('reason', '')
+    order.status = 'cancelled'
+    order.cancelled_by = role
+    order.cancel_reason = (reason or '')[:200]
+    db.session.commit()
+
+    who = {'customer': 'الزبون', 'restaurant': 'المطعم', 'admin': 'الإدارة'}.get(role, role)
+
+    # إبلاغ كل الأطراف المعنية
+    targets = {order.customer_id}
+    if order.restaurant and order.restaurant.user_id:
+        targets.add(order.restaurant.user_id)
+    if order.driver_id:
+        targets.add(order.driver_id)
+    targets.discard(current_user.id)
+
+    for uid in targets:
+        create_notification(
+            uid,
+            '❌ أُلغي الطلب',
+            f'الطلب {order.order_number} أُلغي من طرف {who}' + (f' — {reason}' if reason else ''),
+            order.id
+        )
+
+    socketio.emit('order_update', {
+        'order_id': order.id, 'status': 'cancelled', 'by': role
+    }, room=f'order_{order.id}')
+
+    return jsonify({'success': True, 'message': 'تم إلغاء الطلب'})
 
 
 @app.route('/api/pricing/quote')

@@ -122,11 +122,14 @@
                             </div>
                         </div>
                         
-                        {% if order.status == 'picked_up' %}
+                        {% if order.status == 'assigned' %}
+                            <div class="alert alert-warning py-2 mb-2 small">
+                                <i class="fas fa-store"></i> توجّه إلى المطعم واستلم الطلب
+                            </div>
                             <button class="btn btn-primary w-100 mb-2" onclick="startDelivery({{ order.id }})">
-                                <i class="fas fa-play"></i> ابدا التوصيل
+                                <i class="fas fa-box"></i> استلمتها — انطلقت للزبون
                             </button>
-                        {% elif order.status == 'delivering' %}
+                        {% elif order.status in ['picked_up', 'delivering'] %}
                             <button class="btn btn-success w-100 mb-2" onclick="showCompleteModal({{ order.id }})">
                                 <i class="fas fa-check-circle"></i> سلمتها
                             </button>
@@ -205,7 +208,7 @@
     {% else %}
     <div class="alert alert-info text-center">
         <i class="fas fa-info-circle fa-3x mb-3"></i>
-        <h5>لاتوجد طلبيات الأن</h5>
+        <h5>لا توجد طلبيات الأن</h5>
         <p class="mb-0">نعلمك اذا توجد طلبية جديدة</p>
     </div>
     {% endif %}

@@ -60,11 +60,13 @@
                         <small class="text-muted">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                     </div>
                     <span class="badge status-{{ order.status }}">
-                        {% if order.status == 'pending' %}⏳ في الانتظار
-                        {% elif order.status == 'confirmed' %}✅ تأكدت
-                        {% elif order.status == 'ready' %}🍽️ جاهزة
-                        {% elif order.status == 'picked_up' %}🚗 السائق أخذها
-                        {% elif order.status == 'delivering' %}🏍️ في الطريق
+                        {% if order.status == 'pending' %}⏳ بانتظار المطعم
+                        {% elif order.status == 'confirmed' %}👨‍🍳 قيد التحضير
+                        {% elif order.status == 'ready' %}🍽️ جاهز — ننتظر سائقاً
+                        {% elif order.status == 'assigned' %}🛵 السائق في طريقه للمطعم
+                        {% elif order.status in ['picked_up', 'delivering'] %}🏍️ في الطريق إليك
+                        {% elif order.status == 'delivered' %}✅ تم التسليم
+                        {% elif order.status == 'cancelled' %}❌ ملغى
                         {% endif %}
                     </span>
                 </div>
@@ -80,7 +82,7 @@
                     {% endif %}
                 </div>
                 
-                {% if order.verification_code and order.status in ['picked_up', 'delivering'] and not order.is_verified %}
+                {% if order.verification_code and order.status in ['assigned', 'picked_up', 'delivering'] and not order.is_verified %}
                 <div class="alert alert-warning mb-3">
                     <p class="mb-2"><strong>كود التحقق:</strong></p>
                     <div class="verification-code pulse">{{ order.verification_code }}</div>
@@ -88,6 +90,20 @@
                 </div>
                 {% endif %}
                 
+                {% if order.status in ['pending', 'confirmed'] %}
+                <button class="btn btn-outline-danger btn-sm w-100 mb-3" onclick="cancelOrder({{ order.id }})">
+                    <i class="fas fa-xmark"></i> إلغاء الطلب
+                </button>
+                {% elif order.status == 'cancelled' %}
+                <div class="alert alert-secondary py-2 mb-3 small">
+                    <i class="fas fa-circle-info"></i> أُلغي الطلب
+                    {% if order.cancelled_by == 'restaurant' %}من طرف المطعم
+                    {% elif order.cancelled_by == 'admin' %}من طرف الإدارة
+                    {% elif order.cancelled_by == 'customer' %}بناءً على طلبك{% endif %}
+                    {% if order.cancel_reason %}<br><span class="text-muted">{{ order.cancel_reason }}</span>{% endif %}
+                </div>
+                {% endif %}
+
                 {% if order.driver %}
                 <div class="alert alert-success mb-3">
                     <p class="mb-1"><i class="fas fa-user"></i> <strong>السائق:</strong> {{ order.driver.username }}</p>
@@ -153,9 +169,29 @@
         <div class="col-12">
             <div class="alert alert-info text-center">
                 <i class="fas fa-info-circle fa-3x mb-3"></i>
-                <p class="mb-0">لاتوجد مطاعم </p>
+                <p class="mb-0">لا توجد مطاعم </p>
             </div>
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function cancelOrder(orderId) {
+    const reason = prompt('سبب الإلغاء (اختياري):', '');
+    if (reason === null) return;
+    fetch(`/order/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.success) { location.reload(); }
+        else { alert(d.error || 'تعذّر إلغاء الطلب'); }
+    })
+    .catch(() => alert('تعذّر الاتصال بالخادم'));
+}
+</script>
 {% endblock %}
