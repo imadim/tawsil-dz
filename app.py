@@ -209,6 +209,19 @@ def ensure_schema():
                         text("UPDATE users SET wilaya = :new WHERE wilaya = :old"),
                         {"new": new, "old": old}
                     )
+                # البلديات والتصنيفات في البيانات التجريبية القديمة
+                for old, new in {"Bab El Oued": "باب الوادي", "Hydra": "حيدرة"}.items():
+                    conn.execute(
+                        text("UPDATE restaurants SET commune = :new WHERE commune = :old"),
+                        {"new": new, "old": old}
+                    )
+                for name_ar, c in {"مطعم الأصالة": "مأكولات جزائرية",
+                                   "فاست فود الوفاء": "فاست فود"}.items():
+                    conn.execute(
+                        text("UPDATE restaurants SET cuisine = :c "
+                             "WHERE name_ar = :n AND (cuisine IS NULL OR cuisine = :d)"),
+                        {"c": c, "n": name_ar, "d": DEFAULT_CUISINE}
+                    )
         except Exception as e:
             print(f"⚠️  ensure_schema: {e}")
 
