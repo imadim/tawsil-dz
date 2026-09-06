@@ -115,22 +115,110 @@ def upload_restaurant_image(restaurant_id):
 # DATABASE INITIALIZATION
 # ============================================
 
-# Algerian Wilayas
+# ============================================
+# ولايات الجزائر الـ58 (المرسوم 2019) وتصنيفات المطاعم
+# ============================================
+
 WILAYAS = [
-    "Alger", "Oran", "Constantine", "Annaba", "Blida", "Batna", "Djelfa", "Sétif",
-    "Sidi Bel Abbès", "Biskra", "Tébessa", "El Oued", "Skikda", "Tiaret", "Béjaïa",
-    "Tlemcen", "Ouargla", "Béchar", "Mostaganem", "Bordj Bou Arreridj", "Chlef",
-    "Souk Ahras", "El Tarf", "Jijel", "Saïda", "Khenchela", "Oum El Bouaghi",
-    "Batna", "Médéa", "Mascara", "Ouargla", "Constantine", "Ain Defla",
-    "Naâma", "Ain Témouchent", "Ghardaïa", "Relizane", "Timimoun", "Bordj Badji Mokhtar",
-    "Ouled Djellal", "Béni Abbès", "In Salah", "In Guezzam", "Touggourt",
-    "Djanet", "El M'Ghair", "El Meniaa"
+    ("01", "أدرار"), ("02", "الشلف"), ("03", "الأغواط"), ("04", "أم البواقي"),
+    ("05", "باتنة"), ("06", "بجاية"), ("07", "بسكرة"), ("08", "بشار"),
+    ("09", "البليدة"), ("10", "البويرة"), ("11", "تمنراست"), ("12", "تبسة"),
+    ("13", "تلمسان"), ("14", "تيارت"), ("15", "تيزي وزو"), ("16", "الجزائر"),
+    ("17", "الجلفة"), ("18", "جيجل"), ("19", "سطيف"), ("20", "سعيدة"),
+    ("21", "سكيكدة"), ("22", "سيدي بلعباس"), ("23", "عنابة"), ("24", "قالمة"),
+    ("25", "قسنطينة"), ("26", "المدية"), ("27", "مستغانم"), ("28", "المسيلة"),
+    ("29", "معسكر"), ("30", "ورقلة"), ("31", "وهران"), ("32", "البيض"),
+    ("33", "إليزي"), ("34", "برج بوعريريج"), ("35", "بومرداس"), ("36", "الطارف"),
+    ("37", "تندوف"), ("38", "تيسمسيلت"), ("39", "الوادي"), ("40", "خنشلة"),
+    ("41", "سوق أهراس"), ("42", "تيبازة"), ("43", "ميلة"), ("44", "عين الدفلى"),
+    ("45", "النعامة"), ("46", "عين تموشنت"), ("47", "غرداية"), ("48", "غليزان"),
+    ("49", "تيميمون"), ("50", "برج باجي مختار"), ("51", "أولاد جلال"),
+    ("52", "بني عباس"), ("53", "عين صالح"), ("54", "عين قزام"), ("55", "تقرت"),
+    ("56", "جانت"), ("57", "المغير"), ("58", "المنيعة"),
 ]
+
+WILAYA_NAMES = [name for _, name in WILAYAS]
+
+# تصنيفات المطاعم — تُستعمل في التسجيل وفي فلترة الصفحة الرئيسية
+CUISINES = [
+    "مأكولات جزائرية",
+    "فاست فود",
+    "بيتزا",
+    "برغر وساندويتشات",
+    "مشاوي",
+    "مأكولات بحرية",
+    "مأكولات شرقية",
+    "مأكولات إيطالية",
+    "مأكولات آسيوية",
+    "حلويات ومرطبات",
+    "مخبزة وفطائر",
+    "مشروبات وعصائر",
+    "أخرى",
+]
+
+DEFAULT_CUISINE = "أخرى"
+
+
+# أسماء الولايات القديمة باللاتينية → المقابل العربي (توحيد البيانات القديمة)
+LEGACY_WILAYA_MAP = {
+    "Alger": "الجزائر", "Oran": "وهران", "Constantine": "قسنطينة", "Annaba": "عنابة",
+    "Blida": "البليدة", "Batna": "باتنة", "Djelfa": "الجلفة", "Sétif": "سطيف",
+    "Setif": "سطيف", "Sidi Bel Abbès": "سيدي بلعباس", "Biskra": "بسكرة",
+    "Tébessa": "تبسة", "El Oued": "الوادي", "Skikda": "سكيكدة", "Tiaret": "تيارت",
+    "Béjaïa": "بجاية", "Tlemcen": "تلمسان", "Ouargla": "ورقلة", "Béchar": "بشار",
+    "Mostaganem": "مستغانم", "Bordj Bou Arreridj": "برج بوعريريج", "Chlef": "الشلف",
+    "Souk Ahras": "سوق أهراس", "El Tarf": "الطارف", "Jijel": "جيجل", "Saïda": "سعيدة",
+    "Khenchela": "خنشلة", "Oum El Bouaghi": "أم البواقي", "Médéa": "المدية",
+    "Mascara": "معسكر", "Ain Defla": "عين الدفلى", "Naâma": "النعامة",
+    "Ain Témouchent": "عين تموشنت", "Ghardaïa": "غرداية", "Relizane": "غليزان",
+    "Timimoun": "تيميمون", "Bordj Badji Mokhtar": "برج باجي مختار",
+    "Ouled Djellal": "أولاد جلال", "Béni Abbès": "بني عباس", "In Salah": "عين صالح",
+    "In Guezzam": "عين قزام", "Touggourt": "تقرت", "Djanet": "جانت",
+    "El M'Ghair": "المغير", "El Meniaa": "المنيعة",
+}
+
+
+def ensure_schema():
+    """ترحيل خفيف: يضيف الأعمدة الناقصة بلا ما يمسّ البيانات الموجودة.
+    يخدم على SQLite (محلياً) و PostgreSQL (على الخادم)."""
+    from sqlalchemy import inspect, text
+    with app.app_context():
+        try:
+            insp = inspect(db.engine)
+            if 'restaurants' not in insp.get_table_names():
+                return
+            cols = {c['name'] for c in insp.get_columns('restaurants')}
+            if 'cuisine' not in cols:
+                with db.engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE restaurants ADD COLUMN cuisine VARCHAR(50)"
+                    ))
+                    conn.execute(text(
+                        "UPDATE restaurants SET cuisine = :d WHERE cuisine IS NULL"
+                    ), {"d": DEFAULT_CUISINE})
+                print("✅ عمود cuisine أُضيف لجدول المطاعم")
+
+            # توحيد أسماء الولايات القديمة (كانت باللاتينية) مع القائمة العربية
+            with db.engine.begin() as conn:
+                for old, new in LEGACY_WILAYA_MAP.items():
+                    conn.execute(
+                        text("UPDATE restaurants SET wilaya = :new WHERE wilaya = :old"),
+                        {"new": new, "old": old}
+                    )
+                    conn.execute(
+                        text("UPDATE users SET wilaya = :new WHERE wilaya = :old"),
+                        {"new": new, "old": old}
+                    )
+        except Exception as e:
+            print(f"⚠️  ensure_schema: {e}")
+
 
 def init_database():
     """Initialize database with Algerian sample data"""
     with app.app_context():
         db.create_all()
+    ensure_schema()
+    with app.app_context():
         
         # Create admin
         if not User.query.filter_by(email='admin@delivery.dz').first():
@@ -192,8 +280,9 @@ def init_database():
                 name_ar='مطعم الأصالة',
                 description_ar='مأكولات جزائرية أصيلة',
                 address='شارع ديدوش مراد، الجزائر العاصمة',
-                wilaya='Alger',
-                commune='Bab El Oued',
+                wilaya='الجزائر',
+                cuisine='مأكولات جزائرية',
+                commune='باب الوادي',
                 latitude=36.7538,
                 longitude=3.0588,
                 phone='0540123456',
@@ -246,8 +335,9 @@ def init_database():
                 name_ar='فاست فود الوفاء',
                 description_ar='وجبات سريعة لذيذة',
                 address='حيدرة، الجزائر',
-                wilaya='Alger',
-                commune='Hydra',
+                wilaya='الجزائر',
+                cuisine='فاست فود',
+                commune='حيدرة',
                 latitude=36.7000,
                 longitude=3.0500,
                 phone='0550234567',
@@ -400,6 +490,12 @@ def admin_toggle_restaurant(r_id):
 # AUTHENTICATION ROUTES
 # ============================================
 
+@app.context_processor
+def inject_lists():
+    """الولايات والتصنيفات متاحة في كل القوالب"""
+    return dict(WILAYAS=WILAYAS, WILAYA_NAMES=WILAYA_NAMES, CUISINES=CUISINES)
+
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -511,6 +607,7 @@ def register():
                     description_ar=request.form.get('description_ar'),
                     address=request.form.get('address'),
                     wilaya=wilaya,
+                    cuisine=request.form.get('cuisine') or DEFAULT_CUISINE,
                     commune=request.form.get('commune'),
                     latitude=float(request.form.get('latitude', 36.7538)),
                     longitude=float(request.form.get('longitude', 3.0588)),
@@ -590,6 +687,7 @@ def restaurant_register():
         latitude       = request.form.get('latitude', '0').strip()
         longitude      = request.form.get('longitude', '0').strip()
         commission     = request.form.get('commission_rate', '10').strip()
+        cuisine        = request.form.get('cuisine', '').strip() or DEFAULT_CUISINE
 
         # ── auto generate email if empty ──
         if not email:
@@ -660,6 +758,7 @@ def restaurant_register():
                 description_ar  = description_ar or '',
                 address         = address,        # ← never None now
                 wilaya          = wilaya,
+                    cuisine=cuisine,
                 commune         = commune or '',
                 phone           = rest_phone or phone,
                 latitude        = lat,

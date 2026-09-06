@@ -72,6 +72,7 @@ class Restaurant(db.Model):
     
     phone = db.Column(db.String(20))
     image_url = db.Column(db.String(500), nullable=True, default=None)
+    cuisine = db.Column(db.String(50), index=True, default='أخرى')
     is_open = db.Column(db.Boolean, default=True, index=True)
     rating = db.Column(db.Float, default=0.0)
     

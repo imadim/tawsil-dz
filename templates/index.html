@@ -4,20 +4,60 @@
 
 {% block content %}
 
+<!-- ═══════════ شاشة اختيار الدور ═══════════ -->
+<div id="roleGate" class="role-gate" hidden>
+    <div class="rg-inner">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="توصيل DZ" class="rg-logo">
+        <h2>مرحبا بيك في توصيل DZ</h2>
+        <p>اختار واش راك تدير، ونوريولك غير واش يهمّك</p>
+
+        <div class="rg-cards">
+            <button type="button" class="rg-card" data-pick="customer">
+                <span class="rg-ico" style="background:#e8f3ed;color:#006633;"><i class="fas fa-bag-shopping"></i></span>
+                <strong>أنا زبون</strong>
+                <small>نحب نطلب ماكلة</small>
+            </button>
+            <button type="button" class="rg-card" data-pick="restaurant">
+                <span class="rg-ico" style="background:#fff3e6;color:#e07b00;"><i class="fas fa-utensils"></i></span>
+                <strong>عندي مطعم</strong>
+                <small>نحب نبيع ونستقبل طلبيات</small>
+            </button>
+            <button type="button" class="rg-card" data-pick="driver">
+                <span class="rg-ico" style="background:#fdeef0;color:#D21034;"><i class="fas fa-motorcycle"></i></span>
+                <strong>أنا سائق</strong>
+                <small>نحب نوصّل ونربح</small>
+            </button>
+        </div>
+
+        <button type="button" class="rg-skip" data-pick="all">نشوف كل شي</button>
+    </div>
+</div>
+
 <!-- ═══════════ HERO ═══════════ -->
 <section class="hero">
     <div class="hero-bg"></div>
     <div class="row align-items-center g-4 position-relative">
         <div class="col-lg-7">
-            <span class="hero-pill"><i class="fas fa-bolt"></i> توصيل في أقل من 30 دقيقة</span>
+            <div class="hero-top">
+                <span class="hero-pill"><i class="fas fa-bolt"></i> توصيل في أقل من 30 دقيقة</span>
+                <button type="button" id="roleSwitch" class="role-switch" hidden>
+                    <i class="fas fa-repeat"></i> <span id="roleLabel"></span>
+                </button>
+            </div>
             <h1 class="hero-title">اطلب واش تحب تاكل<br><span>ويوصلك للباب</span></h1>
             <p class="hero-sub">منتوجك ... أقرب إليك. اختار من المطاعم القريبة منك، أطلب في دقيقة،
                وتبّع السائق على الخريطة لحظة بلحظة حتى يوصلك.</p>
 
             <div class="hero-actions">
                 {% if not current_user.is_authenticated %}
-                    <a href="{{ url_for('register') }}" class="btn btn-hero-main">
+                    <a href="{{ url_for('register') }}" class="btn btn-hero-main" data-only="all customer">
                         <i class="fas fa-rocket"></i> ابدأ الآن مجاناً
+                    </a>
+                    <a href="{{ url_for('restaurant_register') }}" class="btn btn-hero-main" data-only="restaurant" data-strict>
+                        <i class="fas fa-store"></i> سجّل مطعمك
+                    </a>
+                    <a href="{{ url_for('register') }}" class="btn btn-hero-main" data-only="driver" data-strict>
+                        <i class="fas fa-motorcycle"></i> دير حساب سائق
                     </a>
                     <a href="{{ url_for('login') }}" class="btn btn-hero-ghost">
                         <i class="fas fa-arrow-left-to-bracket"></i> عندي حساب
@@ -53,7 +93,7 @@
 </section>
 
 <!-- ═══════════ كيفاش تخدم ═══════════ -->
-<section class="how">
+<section class="how" data-only="all customer">
     <div class="row g-4">
         <div class="col-md-4">
             <div class="how-card">
@@ -83,7 +123,7 @@
 </section>
 
 <!-- ═══════════ المطاعم ═══════════ -->
-<section id="restaurants">
+<section id="restaurants" data-only="all customer">
     <div class="sec-head">
         <div>
             <h2>المطاعم المتاحة</h2>
@@ -99,13 +139,32 @@
         </div>
         <select id="wilayaFilter" class="fb-select">
             <option value="">كل الولايات</option>
-            {% for w in restaurants|map(attribute='wilaya')|unique|sort %}
-            <option value="{{ w }}">{{ w }}</option>
+            {% set active = restaurants|map(attribute='wilaya')|unique|list %}
+            {% if active %}
+            <optgroup label="فيها مطاعم">
+                {% for w in active|sort %}
+                <option value="{{ w }}">{{ w }}</option>
+                {% endfor %}
+            </optgroup>
+            {% endif %}
+            <optgroup label="كل ولايات الجزائر">
+                {% for code, name in WILAYAS %}
+                <option value="{{ name }}">{{ code }} - {{ name }}</option>
+                {% endfor %}
+            </optgroup>
+        </select>
+        <select id="cuisineFilter" class="fb-select">
+            <option value="">كل التصنيفات</option>
+            {% for c in CUISINES %}
+            <option value="{{ c }}">{{ c }}</option>
             {% endfor %}
         </select>
         <label class="fb-toggle">
             <input type="checkbox" id="openOnly"> <span>المفتوحة فقط</span>
         </label>
+        <button type="button" id="resetFilters" class="fb-reset" hidden>
+            <i class="fas fa-xmark"></i> صفّي
+        </button>
     </div>
     <p class="fb-count" id="resultCount"></p>
     {% endif %}
@@ -116,6 +175,7 @@
             <div class="col-md-6 col-lg-4 r-item"
                  data-name="{{ restaurant.name_ar }} {{ restaurant.name }}"
                  data-wilaya="{{ restaurant.wilaya }}"
+                 data-cuisine="{{ restaurant.cuisine or 'أخرى' }}"
                  data-open="{{ '1' if restaurant.is_open else '0' }}">
                 <div class="r-card">
                     <div class="r-media">
@@ -154,6 +214,9 @@
                         </h5>
                         {% if restaurant.name != restaurant.name_ar %}
                         <span class="r-latin">{{ restaurant.name }}</span>
+                        {% endif %}
+                        {% if restaurant.cuisine %}
+                        <span class="r-cuisine">{{ restaurant.cuisine }}</span>
                         {% endif %}
 
                         {% if restaurant.description_ar %}
@@ -211,29 +274,61 @@
     </div>
 </section>
 
-<!-- ═══════════ انضم إلينا ═══════════ -->
-{% if not current_user.is_authenticated or current_user.role == 'customer' %}
-<section class="join">
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="join-card jc-green">
-                <i class="fas fa-utensils"></i>
-                <h4>عندك مطعم؟</h4>
-                <p>سجّل مطعمك مجاناً، بني قائمتك، واستقبل طلبيات من زبائن قريبين منك.</p>
-                <a href="{{ url_for('restaurant_register') }}" class="btn btn-join">سجّل مطعمك</a>
+<!-- ═══════════ للمطاعم ═══════════ -->
+<section class="rolesec rs-rest" data-only="restaurant">
+    <div class="row g-4 align-items-center">
+        <div class="col-lg-6">
+            <span class="rs-tag"><i class="fas fa-utensils"></i> لأصحاب المطاعم</span>
+            <h2>زيد مطعمك للمنصة واستقبل طلبيات</h2>
+            <p>التسجيل مجاني بلا اشتراك شهري. تبني قائمتك، وتوصلك الطلبيات مباشرة في لوحة التحكم،
+               وشبكة السائقين تتكفّل بالتوصيل.</p>
+            <div class="rs-actions">
+                <a href="{{ url_for('restaurant_register') }}" class="btn btn-rs">
+                    <i class="fas fa-store"></i> سجّل مطعمك مجاناً
+                </a>
+                <a href="{{ url_for('guide_download', role='restaurant') }}" target="_blank" class="btn btn-rs-ghost">
+                    <i class="fas fa-book-open"></i> اقرأ دليل المطعم
+                </a>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="join-card jc-dark">
-                <i class="fas fa-motorcycle"></i>
-                <h4>عندك موتور؟</h4>
-                <p>خدم معانا سائق، اقبل الطلبيات لي تناسبك، واربح 200 د.ج على كل توصيلة.</p>
-                <a href="{{ url_for('register') }}" class="btn btn-join">خدم معانا</a>
+        <div class="col-lg-6">
+            <div class="rs-grid">
+                <div class="rs-item"><i class="fas fa-percent"></i><b>10٪ فقط</b><span>عمولة على الأكل، ولا شيء على التوصيل</span></div>
+                <div class="rs-item"><i class="fas fa-bell"></i><b>إشعار فوري</b><span>كل طلبية جديدة توصلك في الحين</span></div>
+                <div class="rs-item"><i class="fas fa-list-check"></i><b>قائمة مرنة</b><span>زيد، عدّل، ولا نقّص أطباقك وقت ما تحب</span></div>
+                <div class="rs-item"><i class="fas fa-motorcycle"></i><b>سائقون جاهزون</b><span>ما تحتاجش توظّف موصّلين</span></div>
             </div>
         </div>
     </div>
 </section>
-{% endif %}
+
+<!-- ═══════════ للسائقين ═══════════ -->
+<section class="rolesec rs-drv" data-only="driver">
+    <div class="row g-4 align-items-center">
+        <div class="col-lg-6">
+            <span class="rs-tag"><i class="fas fa-motorcycle"></i> للسائقين</span>
+            <h2>خدم معانا واربح 200 د.ج على كل توصيلة</h2>
+            <p>رسوم التوصيل كاملة تروح ليك، بلا حتى عمولة. تفتح على الخدمة كي تحب،
+               وتقبل غير الطلبيات لي تناسبك.</p>
+            <div class="rs-actions">
+                <a href="{{ url_for('register') }}" class="btn btn-rs">
+                    <i class="fas fa-user-plus"></i> دير حساب سائق
+                </a>
+                <a href="{{ url_for('guide_download', role='driver') }}" target="_blank" class="btn btn-rs-ghost">
+                    <i class="fas fa-book-open"></i> اقرأ دليل السائق
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="rs-grid">
+                <div class="rs-item"><i class="fas fa-money-bill-wave"></i><b>200 د.ج</b><span>لكل طلبية، بلا اقتطاع</span></div>
+                <div class="rs-item"><i class="fas fa-clock"></i><b>وقتك أنت</b><span>افتح وطفّي «متاح» كي تحب</span></div>
+                <div class="rs-item"><i class="fas fa-map-location-dot"></i><b>مسار واضح</b><span>عنوان المطعم والزبون على الخريطة</span></div>
+                <div class="rs-item"><i class="fas fa-wallet"></i><b>أرباح مباشرة</b><span>تتحسب ساعة ما تكمّل التوصيلة</span></div>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- ═══════════ حمّل التطبيق ═══════════ -->
 <section class="appdl">
@@ -302,7 +397,7 @@
     </div>
     <div class="team-contact">
         <a href="tel:0558651909"><i class="fas fa-phone"></i> 0558651909</a>
-        <a href="mailto:a.hammid223@gmail.com"><i class="fas fa-envelope"></i> a.hammid223@gmail.com</a>
+        <a href="mailto:a.hamid223@gmail.com"><i class="fas fa-envelope"></i> a.hamid223@gmail.com</a>
     </div>
 </section>
 
@@ -320,10 +415,68 @@
 
 {% block extra_js %}
 <script>
+/* ───── اختيار الدور ───── */
+(function () {
+    const KEY   = 'tawsil_role';
+    const gate  = document.getElementById('roleGate');
+    const swBtn = document.getElementById('roleSwitch');
+    const label = document.getElementById('roleLabel');
+    const NAMES = { customer: 'زبون', restaurant: 'مطعم', driver: 'سائق', all: 'الكل' };
+
+    function apply(role) {
+        document.body.dataset.role = role;
+        document.querySelectorAll('[data-only]').forEach(function (el) {
+            const allowed = el.dataset.only.split(/\s+/);
+            const strict  = el.hasAttribute('data-strict');
+            const show    = allowed.indexOf(role) !== -1 || (role === 'all' && !strict);
+            el.style.display = show ? '' : 'none';
+        });
+        if (label) label.textContent = 'أنا: ' + (NAMES[role] || 'الكل');
+        if (swBtn) swBtn.hidden = false;
+        if (gate)  gate.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    function openGate() {
+        if (!gate) return;
+        gate.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    let saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+
+    if (saved && NAMES[saved]) {
+        apply(saved);
+    } else {
+        // نوريو كل شي تحت، والشاشة فوقها
+        apply('all');
+        openGate();
+    }
+
+    document.querySelectorAll('[data-pick]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const r = btn.dataset.pick;
+            try { localStorage.setItem(KEY, r); } catch (e) {}
+            apply(r);
+            const target = { restaurant: '.rs-rest', driver: '.rs-drv', customer: '#restaurants' }[r];
+            if (target) {
+                const el = document.querySelector(target);
+                if (el) setTimeout(function () { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
+            }
+        });
+    });
+
+    if (swBtn) swBtn.addEventListener('click', openGate);
+})();
+
+/* ───── بحث وفلترة المطاعم ───── */
 (function () {
     const search  = document.getElementById('searchInput');
     const wilaya  = document.getElementById('wilayaFilter');
+    const cuisine = document.getElementById('cuisineFilter');
     const openOnly= document.getElementById('openOnly');
+    const reset   = document.getElementById('resetFilters');
     const items   = Array.from(document.querySelectorAll('.r-item'));
     const noRes   = document.getElementById('noResults');
     const count   = document.getElementById('resultCount');
@@ -332,23 +485,32 @@
     function apply() {
         const q = search.value.trim().toLowerCase();
         const w = wilaya.value;
+        const c = cuisine.value;
         const o = openOnly.checked;
         let shown = 0;
         items.forEach(function (el) {
-            const okName   = !q || el.dataset.name.toLowerCase().includes(q);
-            const okWilaya = !w || el.dataset.wilaya === w;
-            const okOpen   = !o || el.dataset.open === '1';
-            const ok = okName && okWilaya && okOpen;
+            const ok = (!q || el.dataset.name.toLowerCase().includes(q))
+                    && (!w || el.dataset.wilaya === w)
+                    && (!c || el.dataset.cuisine === c)
+                    && (!o || el.dataset.open === '1');
             el.style.display = ok ? '' : 'none';
             if (ok) shown++;
         });
+        const filtering = !!(q || w || c || o);
         noRes.style.display = shown ? 'none' : '';
-        count.textContent = shown === items.length
-            ? '' : 'يبان ' + shown + ' من ' + items.length + ' مطعم';
+        reset.hidden = !filtering;
+        count.textContent = filtering
+            ? 'يبان ' + shown + ' من ' + items.length + ' مطعم'
+            : '';
     }
-    [search, wilaya, openOnly].forEach(function (el) {
+
+    [search, wilaya, cuisine, openOnly].forEach(function (el) {
         el.addEventListener('input', apply);
         el.addEventListener('change', apply);
+    });
+    reset.addEventListener('click', function () {
+        search.value = ''; wilaya.value = ''; cuisine.value = ''; openOnly.checked = false;
+        apply();
     });
 })();
 </script>
@@ -357,6 +519,85 @@
 
 {% block extra_css %}
 <style>
+/* ───────── شاشة اختيار الدور ───────── */
+.role-gate {
+    position: fixed; inset: 0; z-index: 2000;
+    background: linear-gradient(160deg, #004d26 0%, #007a35 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; overflow-y: auto;
+}
+.rg-inner { max-width: 760px; width: 100%; text-align: center; color: #fff; }
+.rg-logo {
+    width: 148px; background: #fff; border-radius: 22px; padding: 14px 16px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.28); margin-bottom: 22px;
+}
+.rg-inner h2 { font-weight: 800; font-size: 1.75rem; margin-bottom: 8px; }
+.rg-inner > p { color: rgba(255,255,255,.82); margin-bottom: 30px; }
+.rg-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+.rg-card {
+    background: #fff; border: 0; border-radius: 18px; padding: 26px 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    font-family: inherit; cursor: pointer; transition: transform .2s, box-shadow .2s;
+}
+.rg-card:hover { transform: translateY(-5px); box-shadow: 0 16px 36px rgba(0,0,0,.26); }
+.rg-ico {
+    width: 58px; height: 58px; border-radius: 17px; font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 8px;
+}
+.rg-card strong { color: #12201a; font-size: 1.05rem; font-weight: 800; }
+.rg-card small { color: #7b8c84; font-size: .84rem; }
+.rg-skip {
+    background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff;
+    border-radius: 999px; padding: 9px 22px; font-family: inherit; font-size: .9rem; cursor: pointer;
+}
+.rg-skip:hover { background: rgba(255,255,255,.14); }
+
+.hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.role-switch {
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); color: #fff;
+    border-radius: 999px; padding: 6px 15px; font-size: .81rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; margin-bottom: 20px;
+}
+.role-switch:hover { background: rgba(255,255,255,.24); }
+
+/* ───────── أقسام الأدوار ───────── */
+.rolesec { border-radius: 22px; padding: 42px 38px; margin-bottom: 58px; color: #fff; }
+.rs-rest { background: linear-gradient(135deg, #006633 0%, #00913f 100%); }
+.rs-drv  { background: linear-gradient(135deg, #1b2d24 0%, #33513f 100%); }
+.rs-tag {
+    display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,.17);
+    border-radius: 999px; padding: 6px 15px; font-size: .82rem; font-weight: 700; margin-bottom: 14px;
+}
+.rolesec h2 { font-weight: 800; font-size: 1.7rem; margin-bottom: 12px; line-height: 1.5; }
+.rolesec > .row > div > p { color: rgba(255,255,255,.86); line-height: 1.95; margin-bottom: 24px; }
+.rs-actions { display: flex; gap: 11px; flex-wrap: wrap; }
+.btn-rs { background: #fff; color: #12201a; font-weight: 700; border-radius: 12px; padding: 12px 26px; }
+.btn-rs:hover { background: #f0f7f3; color: #12201a; }
+.btn-rs-ghost {
+    background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.32);
+    border-radius: 12px; padding: 12px 24px; font-weight: 600;
+}
+.btn-rs-ghost:hover { background: rgba(255,255,255,.24); color: #fff; }
+.rs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rs-item {
+    background: rgba(255,255,255,.12); border-radius: 15px; padding: 18px 16px;
+    display: flex; flex-direction: column; gap: 3px;
+}
+.rs-item i { font-size: 1.15rem; margin-bottom: 7px; opacity: .9; }
+.rs-item b { font-size: 1.02rem; font-weight: 800; }
+.rs-item span { font-size: .82rem; color: rgba(255,255,255,.78); line-height: 1.6; }
+
+/* شارة التصنيف وزر التصفية */
+.r-cuisine {
+    display: inline-block; background: #eef4f0; color: #33443c; border-radius: 7px;
+    padding: 3px 9px; font-size: .74rem; font-weight: 600; margin-top: 6px;
+}
+.fb-reset {
+    background: #fdeef0; color: #D21034; border: 1px solid #f6d9de; border-radius: 11px;
+    padding: 9px 15px; font-family: inherit; font-size: .88rem; font-weight: 600; cursor: pointer;
+}
+.fb-reset:hover { background: #D21034; color: #fff; border-color: #D21034; }
+
 /* ───────── HERO ───────── */
 .hero {
     position: relative; overflow: hidden;
@@ -621,6 +862,16 @@
     .hero-stats strong { font-size: 1.32rem; }
     .guide-cta { padding: 24px 22px; }
     .appdl { padding: 28px 22px; }
+    .rolesec { padding: 28px 22px; }
+    .rolesec h2 { font-size: 1.35rem; }
+    .rs-grid { grid-template-columns: 1fr; }
+    .rg-cards { grid-template-columns: 1fr; gap: 11px; }
+    .rg-card { flex-direction: row; justify-content: flex-start; text-align: right; padding: 16px 18px; gap: 14px; }
+    .rg-card .rg-ico { margin-bottom: 0; width: 46px; height: 46px; font-size: 1.2rem; flex-shrink: 0; }
+    .rg-card div { display: flex; flex-direction: column; }
+    .rg-logo { width: 116px; margin-bottom: 16px; }
+    .rg-inner h2 { font-size: 1.4rem; }
+    .rg-inner > p { margin-bottom: 22px; font-size: .92rem; }
     .ad-qr { margin-top: 8px; }
     .ad-qr img { width: 158px; }
 }
