@@ -14,22 +14,22 @@
             <button type="button" class="rg-card" data-pick="customer">
                 <span class="rg-ico" style="background:#e8f3ed;color:#006633;"><i class="fas fa-bag-shopping"></i></span>
                 <strong>أنا زبون</strong>
-                <small>نحب نطلب ماكلة</small>
+                <small>أريد طلب الطعام</small>
             </button>
             <button type="button" class="rg-card" data-pick="restaurant">
                 <span class="rg-ico" style="background:#fff3e6;color:#e07b00;"><i class="fas fa-utensils"></i></span>
                 <strong>عندي مطعم</strong>
-                <small>نحب نبيع ونستقبل طلبيات</small>
+                <small>أريد استقبال الطلبات</small>
             </button>
             <button type="button" class="rg-card" data-pick="driver">
                 <span class="rg-ico" style="background:#fdeef0;color:#D21034;"><i class="fas fa-motorcycle"></i></span>
                 <strong>أنا سائق</strong>
-                <small>نحب نوصّل ونربح</small>
+                <small>أريد التوصيل والربح</small>
             </button>
         </div>
 
         <div class="rg-foot">
-            <button type="button" class="rg-skip" data-pick="all">التطبيق كاملا</button>
+            <button type="button" class="rg-skip" data-pick="all">عرض التطبيق كاملاً</button>
             <button type="button" class="rg-install" onclick="installApp()">
                 <i class="fas fa-mobile-screen-button"></i> ثبّت التطبيق على هاتفك
             </button>
@@ -48,9 +48,9 @@
                     <i class="fas fa-repeat"></i> <span id="roleLabel"></span>
                 </button>
             </div>
-            <h1 class="hero-title">اطلب واش تحب تاكل<br><span>ويوصلك للباب</span></h1>
-            <p class="hero-sub">منتوجك ... أقرب إليك. اختار من المطاعم القريبة منك، أطلب في دقيقة،
-               وتبّع السائق على الخريطة لحظة بلحظة حتى يوصلك.</p>
+            <h1 class="hero-title">اطلب ما تشتهيه<br><span>ويصلك إلى بابك</span></h1>
+            <p class="hero-sub">منتوجك ... أقرب إليك. اختر من المطاعم القريبة منك، اطلب في دقيقة،
+               وتابع السائق على الخريطة لحظة بلحظة حتى يصل إليك.</p>
 
             <div class="hero-actions">
                 {% if not current_user.is_authenticated %}
@@ -61,14 +61,14 @@
                         <i class="fas fa-store"></i> سجّل مطعمك
                     </a>
                     <a href="{{ url_for('register') }}" class="btn btn-hero-main" data-only="driver" data-strict>
-                        <i class="fas fa-motorcycle"></i> دير حساب سائق
+                        <i class="fas fa-motorcycle"></i> أنشئ حساب سائق
                     </a>
                     <a href="{{ url_for('login') }}" class="btn btn-hero-ghost">
                         <i class="fas fa-arrow-left-to-bracket"></i> عندي حساب
                     </a>
                 {% else %}
                     <a href="#restaurants" class="btn btn-hero-main">
-                        <i class="fas fa-utensils"></i> شوف المطاعم
+                        <i class="fas fa-utensils"></i> تصفّح المطاعم
                     </a>
                     <a href="{{ url_for('guide') }}" class="btn btn-hero-ghost">
                         <i class="fas fa-circle-question"></i> دليل الاستعمال
@@ -96,31 +96,31 @@
     </div>
 </section>
 
-<!-- ═══════════ كيفاش تخدم ═══════════ -->
+<!-- ═══════════ خطوات الاستعمال ═══════════ -->
 <section class="how" data-only="all customer">
     <div class="row g-4">
         <div class="col-md-4">
             <div class="how-card">
                 <div class="how-num">1</div>
                 <i class="fas fa-store how-ico"></i>
-                <h5>اختار مطعم</h5>
-                <p>شوف المطاعم المفتوحة القريبة منك وتصفّح قوائمها.</p>
+                <h5>اختر مطعماً</h5>
+                <p>تصفّح المطاعم المفتوحة القريبة منك واطّلع على قوائمها.</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="how-card">
                 <div class="how-num">2</div>
                 <i class="fas fa-cart-shopping how-ico"></i>
-                <h5>أطلب واخلّص</h5>
-                <p>زيد واش تحب للسلة، اكتب عنوانك، واختار كاش ولا بطاقة.</p>
+                <h5>اطلب وادفع</h5>
+                <p>أضف ما تريده إلى السلة، اكتب عنوانك، واختر الدفع نقداً أو بالبطاقة.</p>
             </div>
         </div>
         <div class="col-md-4">
             <div class="how-card">
                 <div class="how-num">3</div>
                 <i class="fas fa-location-crosshairs how-ico"></i>
-                <h5>تبّع السائق</h5>
-                <p>شوف السائق على الخريطة وين راه وصل حتى يجي عندك.</p>
+                <h5>تابع السائق</h5>
+                <p>تابع موقع السائق على الخريطة حتى يصل إليك.</p>
             </div>
         </div>
     </div>
@@ -139,7 +139,7 @@
     <div class="filter-bar">
         <div class="fb-search">
             <i class="fas fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" placeholder="قلّب على مطعم بالاسم...">
+            <input type="text" id="searchInput" placeholder="ابحث عن مطعم بالاسم...">
         </div>
         <select id="wilayaFilter" class="fb-select">
             <option value="">كل الولايات</option>
@@ -167,7 +167,7 @@
             <input type="checkbox" id="openOnly"> <span>المفتوحة فقط</span>
         </label>
         <button type="button" id="resetFilters" class="fb-reset" hidden>
-            <i class="fas fa-xmark"></i> صفّي
+            <i class="fas fa-xmark"></i> إزالة الفلاتر
         </button>
     </div>
     <p class="fb-count" id="resultCount"></p>
@@ -261,8 +261,8 @@
             <div class="col-12">
                 <div class="empty-state">
                     <i class="fas fa-store-slash"></i>
-                    <h4>ما كاينش مطاعم دروك</h4>
-                    <p>راهم جايين قريب. إذا عندك مطعم، سجّله وكن من الأوائل.</p>
+                    <h4>لا توجد مطاعم حالياً</h4>
+                    <p>قريباً. إن كان لديك مطعم، سجّله وكن من الأوائل.</p>
                     <a href="{{ url_for('restaurant_register') }}" class="btn btn-primary">
                         <i class="fas fa-plus"></i> سجّل مطعمك
                     </a>
@@ -273,8 +273,8 @@
 
     <div class="empty-state" id="noResults" style="display:none;">
         <i class="fas fa-magnifying-glass"></i>
-        <h4>ما لقينا حتى مطعم</h4>
-        <p>جرّب اسم آخر ولا نقّص من الفلاتر.</p>
+        <h4>لم نعثر على أي مطعم</h4>
+        <p>جرّب اسماً آخر أو أزِل بعض الفلاتر.</p>
     </div>
 </section>
 
@@ -283,8 +283,8 @@
     <div class="row g-4 align-items-center">
         <div class="col-lg-6">
             <span class="rs-tag"><i class="fas fa-utensils"></i> لأصحاب المطاعم</span>
-            <h2>زيد مطعمك للمنصة واستقبل طلبيات</h2>
-            <p>التسجيل مجاني بلا اشتراك شهري. تبني قائمتك، وتوصلك الطلبيات مباشرة في لوحة التحكم،
+            <h2>أضف مطعمك إلى المنصة واستقبل الطلبات</h2>
+            <p>التسجيل مجاني دون اشتراك شهري. تبني قائمتك، وتصلك الطلبات مباشرة في لوحة التحكم،
                وشبكة السائقين تتكفّل بالتوصيل.</p>
             <div class="rs-actions">
                 <a href="{{ url_for('restaurant_register') }}" class="btn btn-rs">
@@ -297,10 +297,10 @@
         </div>
         <div class="col-lg-6">
             <div class="rs-grid">
-                <div class="rs-item"><i class="fas fa-percent"></i><b>10٪ فقط</b><span>عمولة على الأكل، ولا شيء على التوصيل</span></div>
-                <div class="rs-item"><i class="fas fa-bell"></i><b>إشعار فوري</b><span>كل طلبية جديدة توصلك في الحين</span></div>
-                <div class="rs-item"><i class="fas fa-list-check"></i><b>قائمة مرنة</b><span>زيد، عدّل، ولا نقّص أطباقك وقت ما تحب</span></div>
-                <div class="rs-item"><i class="fas fa-motorcycle"></i><b>سائقون جاهزون</b><span>ما تحتاجش توظّف موصّلين</span></div>
+                <div class="rs-item"><i class="fas fa-percent"></i><b>10٪ فقط</b><span>عمولة على الطعام فقط، ولا شيء على التوصيل</span></div>
+                <div class="rs-item"><i class="fas fa-bell"></i><b>إشعار فوري</b><span>كل طلب جديد يصلك فوراً</span></div>
+                <div class="rs-item"><i class="fas fa-list-check"></i><b>قائمة مرنة</b><span>أضف أطباقك أو عدّلها أو احذفها متى شئت</span></div>
+                <div class="rs-item"><i class="fas fa-motorcycle"></i><b>سائقون جاهزون</b><span>لا حاجة إلى توظيف موصّلين</span></div>
             </div>
         </div>
     </div>
@@ -311,12 +311,12 @@
     <div class="row g-4 align-items-center">
         <div class="col-lg-6">
             <span class="rs-tag"><i class="fas fa-motorcycle"></i> للسائقين</span>
-            <h2>خدم معانا واربح 200 د.ج على كل توصيلة</h2>
-            <p>رسوم التوصيل كاملة تروح ليك، بلا حتى عمولة. تفتح على الخدمة كي تحب،
-               وتقبل غير الطلبيات لي تناسبك.</p>
+            <h2>اعمل معنا واربح 200 د.ج عن كل توصيلة</h2>
+            <p>رسوم التوصيل كاملة من نصيبك، دون أي عمولة. تبدأ العمل متى شئت،
+               وتقبل الطلبات التي تناسبك فقط.</p>
             <div class="rs-actions">
                 <a href="{{ url_for('register') }}" class="btn btn-rs">
-                    <i class="fas fa-user-plus"></i> دير حساب سائق
+                    <i class="fas fa-user-plus"></i> أنشئ حساب سائق
                 </a>
                 <a href="{{ url_for('guide_download', role='driver') }}" target="_blank" class="btn btn-rs-ghost">
                     <i class="fas fa-book-open"></i> اقرأ دليل السائق
@@ -325,10 +325,10 @@
         </div>
         <div class="col-lg-6">
             <div class="rs-grid">
-                <div class="rs-item"><i class="fas fa-money-bill-wave"></i><b>200 د.ج</b><span>لكل طلبية، بلا اقتطاع</span></div>
-                <div class="rs-item"><i class="fas fa-clock"></i><b>وقتك أنت</b><span>افتح وطفّي «متاح» كي تحب</span></div>
+                <div class="rs-item"><i class="fas fa-money-bill-wave"></i><b>200 د.ج</b><span>عن كل طلب، دون اقتطاع</span></div>
+                <div class="rs-item"><i class="fas fa-clock"></i><b>وقتك بيدك</b><span>فعّل «متاح» أو أوقفه متى شئت</span></div>
                 <div class="rs-item"><i class="fas fa-map-location-dot"></i><b>مسار واضح</b><span>عنوان المطعم والزبون على الخريطة</span></div>
-                <div class="rs-item"><i class="fas fa-wallet"></i><b>أرباح مباشرة</b><span>تتحسب ساعة ما تكمّل التوصيلة</span></div>
+                <div class="rs-item"><i class="fas fa-wallet"></i><b>أرباح مباشرة</b><span>تُحتسب فور إتمام التوصيل</span></div>
             </div>
         </div>
     </div>
@@ -340,31 +340,31 @@
         <div class="col-lg-7">
             <span class="ad-tag"><i class="fas fa-mobile-screen-button"></i> نسخة الهاتف</span>
             <h2>حمّل التطبيق على هاتفك</h2>
-            <p>توصيل DZ تطبيق ويب تقدّمي (PWA) — يتثبّت مباشرة من المتصفح بلا Play Store وبلا مساحة تخزين كبيرة،
-               ويخدم بملء الشاشة مع إشعارات فورية على كل تغيير في طلبيتك.</p>
+            <p>توصيل DZ تطبيق ويب تقدّمي (PWA) — يُثبَّت مباشرة من المتصفح دون Play Store ودون مساحة تخزين كبيرة،
+               ويعمل بملء الشاشة مع إشعارات فورية عند كل تغيير في طلبك.</p>
 
             <div class="ad-steps">
                 <div class="ad-step">
                     <b>أندرويد</b>
-                    <span>حلّ الموقع من Chrome ← اضغط زر «ثبّت التطبيق» الأخضر تحت الشاشة</span>
+                    <span>افتح الموقع في Chrome ثم اضغط زر «ثبّت التطبيق» الأخضر أسفل الشاشة</span>
                 </div>
                 <div class="ad-step">
                     <b>آيفون</b>
-                    <span>حلّ الموقع من Safari ← رمز المشاركة ← «إضافة إلى الشاشة الرئيسية»</span>
+                    <span>افتح الموقع في Safari ثم رمز المشاركة ثم «إضافة إلى الشاشة الرئيسية»</span>
                 </div>
             </div>
 
             <button class="btn btn-appdl" onclick="installApp()">
                 <i class="fas fa-download"></i> ثبّت التطبيق الآن
             </button>
-            <p class="ad-note">إذا ما بانش الزر، معناها التطبيق مثبّت من قبل ولا المتصفح ما يدعمش التثبيت — استعمل خطوات فوق.</p>
+            <p class="ad-note">إن لم يظهر الزر فالتطبيق مثبّت مسبقاً أو المتصفح لا يدعم التثبيت — اتبع الخطوات أعلاه.</p>
         </div>
 
         <div class="col-lg-5 text-center">
             <div class="ad-qr">
-                <img src="{{ url_for('static', filename='images/qr-app.png') }}" alt="امسح الرمز باش تحلّ الموقع على هاتفك">
+                <img src="{{ url_for('static', filename='images/qr-app.png') }}" alt="امسح الرمز لفتح الموقع على هاتفك">
                 <strong>امسح الرمز بكاميرا هاتفك</strong>
-                <small>يحلّ لك الموقع مباشرة</small>
+                <small>يفتح الموقع مباشرة</small>
             </div>
         </div>
     </div>
@@ -408,8 +408,8 @@
 <!-- ═══════════ الدليل ═══════════ -->
 <section class="guide-cta">
     <div>
-        <h4><i class="fas fa-book-open"></i> ما فهمتش كيفاش تخدم المنصة؟</h4>
-        <p>أدلة قصيرة وعملية للزبون، صاحب المطعم، والسائق — تقراها ولا تحمّلها PDF.</p>
+        <h4><i class="fas fa-book-open"></i> هل تحتاج شرحاً لطريقة استخدام المنصة؟</h4>
+        <p>أدلة قصيرة وعملية للزبون وصاحب المطعم والسائق — اقرأها أو حمّلها بصيغة PDF.</p>
     </div>
     <a href="{{ url_for('guide') }}" class="btn btn-guide">اقرأ دليل الاستعمال <i class="fas fa-arrow-left"></i></a>
 </section>
@@ -504,7 +504,7 @@
         noRes.style.display = shown ? 'none' : '';
         reset.hidden = !filtering;
         count.textContent = filtering
-            ? 'يبان ' + shown + ' من ' + items.length + ' مطعم'
+            ? 'يظهر ' + shown + ' من ' + items.length + ' مطعم'
             : '';
     }
 
@@ -530,7 +530,7 @@
     display: flex; align-items: flex-start; justify-content: center;
     padding: 24px; overflow-y: auto;
 }
-/* margin:auto بدل align-items:center — يوسّط بلا ما يقصّ الأعلى في الشاشات القصيرة */
+/* margin:auto بدل align-items:center — يوسّط دون قصّ الأعلى في الشاشات القصيرة */
 .rg-inner { max-width: 760px; width: 100%; text-align: center; color: #fff; margin: auto; }
 .rg-logo {
     width: 148px; background: #fff; border-radius: 22px; padding: 14px 16px;
@@ -647,7 +647,7 @@
 .hero-stats strong { font-size: 1.6rem; font-weight: 800; line-height: 1.2; }
 .hero-stats span { font-size: .84rem; color: rgba(255,255,255,.72); }
 
-/* بطاقة اللوغو — خلفية بيضاء باش يبان اللوغو بوضوح فوق الأخضر */
+/* بطاقة الشعار — خلفية بيضاء ليظهر الشعار بوضوح فوق الأخضر */
 .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 14px 0; }
 .hv-glow {
     position: absolute; width: 330px; height: 330px; border-radius: 50%;
@@ -671,7 +671,7 @@
 .hv-chip-b { bottom: 10px; left: 2px; }
 .hv-chip-b i { color: #e07b00; }
 
-/* ───────── كيفاش تخدم ───────── */
+/* ───────── خطوات الاستعمال ───────── */
 .how { margin-bottom: 56px; }
 .how-card {
     background: #fff; border: 1px solid #e6ede9; border-radius: 18px;

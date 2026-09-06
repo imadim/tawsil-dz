@@ -320,7 +320,7 @@
                         <li><a href="{{ url_for('index') }}">الصفحة الرئيسية</a></li>
                         <li><a href="{{ url_for('guide') }}">دليل الاستعمال</a></li>
                         <li><a href="{{ url_for('restaurant_register') }}">سجّل مطعمك</a></li>
-                        <li><a href="{{ url_for('register') }}">دير حساب</a></li>
+                        <li><a href="{{ url_for('register') }}">إنشاء حساب</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4">
@@ -524,7 +524,7 @@
             if (Notification.permission === 'default') {
                 Notification.requestPermission().then((p) => {
                     if (p === 'granted') {
-                        showNativeNotification('توصيل DZ', 'راك تقبل الإشعارات ✅ غادي نعلموك بكل تحديث في طلبيتك');
+                        showNativeNotification('توصيل DZ', 'تم تفعيل الإشعارات ✅ سنُعلمك بكل تحديث في طلبك');
                     }
                 });
             }
@@ -547,10 +547,10 @@
         function installApp() {
             if (!deferredInstallPrompt) {
                 if (window.matchMedia('(display-mode: standalone)').matches) {
-                    showToast('التطبيق مثبّت', 'راك تستعمل التطبيق المثبّت على هاتفك ✅');
+                    showToast('التطبيق مثبّت', 'أنت تستخدم التطبيق المثبّت على هاتفك ✅');
                 } else {
                     showToast('التثبيت غير متاح هنا',
-                              'حلّ الموقع من متصفح هاتفك (Chrome ولا Safari) وتبّع الخطوات فوق.');
+                              'افتح الموقع من متصفح هاتفك (Chrome أو Safari) واتبع الخطوات أعلاه.');
                 }
                 return;
             }
