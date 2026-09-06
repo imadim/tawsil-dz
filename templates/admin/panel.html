@@ -8,9 +8,17 @@
         <h1>لوحة الإدارة</h1>
         <p>إدارة الحسابات والمطاعم والطلبات وسياسة التسعير</p>
     </div>
-    <a href="{{ url_for('admin_grand_dashboard') }}" class="btn btn-outline-light btn-sm">
-        <i class="fas fa-chart-line"></i> الإحصائيات المالية
-    </a>
+    <div class="ap-headacts">
+        <form method="POST" action="{{ url_for('admin_seed_demo') }}" style="display:inline">
+            <button class="btn btn-light btn-sm" type="submit"
+                    onclick="return confirm('إضافة مطاعم وأطباق وسائقين وزبائن تجريبيين؟ العملية آمنة ولا تكرّر الموجود.')">
+                <i class="fas fa-wand-magic-sparkles"></i> تعبئة بيانات تجريبية
+            </button>
+        </form>
+        <a href="{{ url_for('admin_grand_dashboard') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-chart-line"></i> الإحصائيات المالية
+        </a>
+    </div>
 </div>
 
 <div class="ap-stats">
@@ -277,6 +285,7 @@ function adminCancel(orderId) {
 }
 .ap-head h1 { font-weight: 800; font-size: 1.7rem; margin: 0 0 4px; }
 .ap-head p { margin: 0; color: rgba(255,255,255,.72); font-size: .92rem; }
+.ap-headacts { display: flex; gap: 9px; flex-wrap: wrap; }
 
 .ap-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
 .ap-stat {

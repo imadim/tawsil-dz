@@ -689,6 +689,24 @@ def admin_save_pricing():
     return redirect(url_for('admin_panel') + '#pricing')
 
 
+@app.route("/admin/seed-demo", methods=['POST'])
+@admin_required
+def admin_seed_demo():
+    """تعبئة بيانات العرض: مطاعم وأطباق بصور، سائقون وزبائن. آمنة للتكرار."""
+    try:
+        import demo_data
+        rep = demo_data.seed(db, User, Restaurant, MenuItem, Wallet)
+        flash(
+            f"تمت التعبئة — مطاعم: {rep['restaurants']} جديد و{rep['updated']} محدَّث · "
+            f"أطباق: {rep['dishes']} · سائقون: {rep['drivers']} · زبائن: {rep['customers']}",
+            'success'
+        )
+    except Exception as e:
+        db.session.rollback()
+        flash(f'تعذّرت التعبئة: {e}', 'danger')
+    return redirect(url_for('admin_panel'))
+
+
 @app.route("/admin/restaurant/delete/<int:r_id>")
 @admin_required
 def admin_delete_restaurant(r_id):

@@ -48,3 +48,6 @@ desktop.ini
 # ---- Logs ----
 *.log
 logs/
+
+# أرشيف صور العرض (الصور نفسها مرفوعة)
+static/images/demo/_source.zip

@@ -45,10 +45,21 @@ python app.py
 | الدور | البريد | كلمة السر |
 |---|---|---|
 | إدارة | admin@delivery.dz | admin123 |
-| زبون | client@test.dz | client123 |
-| سائق | chauffeur@test.dz | chauffeur123 |
+| زبون | client@test.dz إلى client6@test.dz | client123 |
+| سائق | chauffeur@test.dz و driver2..5@test.dz | chauffeur123 |
+| مطعم | restaurant@test.dz · amir@ · napoli@ · yasmine@ · bahr@ · fastfood@ | restaurant123 |
 
 > غيّر كلمات السر هذه قبل أي استخدام حقيقي.
+
+## بيانات تجريبية للعرض
+
+لتعبئة المنصة بستة مطاعم بأطباقها وصورها، وخمسة سائقين وستة زبائن:
+
+```bash
+python seed_demo.py
+```
+
+أو من لوحة الإدارة على الخادم: **تعبئة بيانات تجريبية**. العملية آمنة للتكرار — تضيف الناقص ولا تُنشئ نسخاً مكررة.
 
 ## النشر على الإنترنت
 
