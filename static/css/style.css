@@ -1,0 +1,128 @@
+/* Arabic Font */
+body {
+    font-family: 'Cairo', sans-serif;
+}
+
+/* Hero Section */
+.hero-section {
+    animation: fadeIn 1s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Restaurant Cards */
+.restaurant-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* Cart Summary (Fixed on mobile) */
+.cart-summary {
+    position: sticky;
+    top: 20px;
+}
+
+@media (max-width: 768px) {
+    .cart-summary {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: white;
+        border-top: 2px solid #dee2e6;
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+}
+
+/* Timeline */
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    padding: 15px 20px 15px 50px;
+    position: relative;
+    margin-bottom: 10px;
+    border-right: 3px solid #dee2e6;
+    color: #999;
+}
+
+.timeline-item.active {
+    border-right-color: #28a745;
+    color: #28a745;
+    font-weight: bold;
+}
+
+.timeline-item i {
+    position: absolute;
+    right: -15px;
+    top: 15px;
+    background: white;
+    padding: 5px;
+    font-size: 20px;
+}
+
+/* Notification Badge */
+#notifCount {
+    position: absolute;
+    top: -5px;
+    left: -10px;
+    font-size: 0.7rem;
+}
+
+/* Loading Spinner */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Map Container */
+#map {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Buttons Hover Effects */
+.btn {
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Cards Animation */
+.card {
+    animation: slideUp 0.5s;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة المطعم - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; font-size: 36px;">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h2 class="mb-1">{{ restaurant.name_ar }}</h2>
+                        <p class="mb-0"><i class="fas fa-map-marker-alt"></i> {{ restaurant.address }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-3x mb-3"></i>
+                <h6>طلبيات جديدة</h6>
+                <h2>{{ pending_orders|length }}</h2>
+                <small>يجب تأكيدهم</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-fire fa-3x mb-3"></i>
+                <h6>قيد التحضير</h6>
+                <h2>{{ active_orders|length }}</h2>
+                <small>طلبيات نشطة</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-3x mb-3"></i>
+                <h6>تم التسليم</h6>
+                <h2>{{ completed_count }}</h2>
+                <small>لاتوجد طلبيات </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-dollar-sign fa-3x mb-3"></i>
+                <h6>الأرباح</h6>
+                <h2>{{ total_revenue|currency }}</h2>
+                <small>الكل</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Orders -->
+{% if pending_orders %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h4 class="mb-0"><i class="fas fa-bell"></i> طلبيات جديدة يجب تأكيدها</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for order in pending_orders %}
+            <div class="col-lg-6 mb-3">
+                <div class="card border-warning shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">طلبية #{{ order.order_number }}</h5>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i> 
+                                    {{ order.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </div>
+                            <span class="badge bg-warning text-dark" style="font-size: 14px;">جديدة</span>
+                        </div>
+                        
+                        <div class="alert alert-light mb-3">
+                            <p class="mb-1"><i class="fas fa-user text-primary"></i> <strong>الزبون:</strong></p>
+                            <p class="mb-1">{{ order.customer.username }}</p>
+                            <p class="mb-0">
+                                <i class="fas fa-phone text-success"></i> 
+                                <a href="tel:{{ order.customer.phone }}">{{ order.customer.phone }}</a>
+                            </p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p class="mb-2"><strong><i class="fas fa-list"></i> الطلبية:</strong></p>
+                            <ul class="mb-0">
+                                {% for item in order.items %}
+                                <li>{{ item.menu_item.name_ar }} × {{ item.quantity }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        {% if order.customer_notes %}
+                        <div class="alert alert-info mb-3">
+                            <strong><i class="fas fa-comment"></i> ملاحظات:</strong>
+                            <p class="mb-0">{{ order.customer_notes }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="alert alert-success mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span><i class="fas fa-money-bill-wave"></i> المبلغ:</span>
+                                <strong style="font-size: 20px;">{{ order.total_amount|currency }}</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <button class="btn btn-success w-100 confirm-order-btn" data-order-id="{{ order.id }}">
+                                    <i class="fas fa-check"></i> اقبل
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-danger w-100 reject-order-btn" data-order-id="{{ order.id }}">
+                                    <i class="fas fa-times"></i> ارفض
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active Orders -->
+{% if active_orders %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h4 class="mb-0"><i class="fas fa-fire"></i> طلبيات قيد التحضير</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for order in active_orders %}
+            <div class="col-lg-6 mb-3">
+                <div class="card border-info shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">طلبية #{{ order.order_number }}</h5>
+                                <small class="text-muted">{{ order.created_at.strftime('%H:%M') }}</small>
+                            </div>
+                            <span class="badge bg-{{ 'warning' if order.status == 'confirmed' else 'success' if order.status == 'ready' else 'info' }}">
+                                {% if order.status == 'confirmed' %}⏳ قيد التحضير
+                                {% elif order.status == 'ready' %}✅ جاهزة
+                                {% elif order.status == 'picked_up' %}🚗 السائق أخذها
+                                {% elif order.status == 'delivering' %}🏍️ في الطريق
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <p class="mb-1"><i class="fas fa-user"></i> {{ order.customer.username }}</p>
+                        <p class="mb-3">
+                            <i class="fas fa-phone"></i> 
+                            <a href="tel:{{ order.customer.phone }}">{{ order.customer.phone }}</a>
+                        </p>
+                        
+                        <div class="mb-3">
+                            <strong><i class="fas fa-list"></i> الطلبية:</strong>
+                            <ul class="mt-2 mb-0">
+                                {% for item in order.items %}
+                                <li>{{ item.menu_item.name_ar }} × {{ item.quantity }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <div class="alert alert-light mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>المبلغ:</span>
+                                <strong>{{ order.total_amount|currency }}</strong>
+                            </div>
+                        </div>
+                        
+                        {% if order.status == 'confirmed' %}
+                        <button class="btn btn-success w-100 mark-ready-btn" data-order-id="{{ order.id }}">
+                            <i class="fas fa-check-double"></i> الطلبية جاهزة
+                        </button>
+                        {% elif order.status == 'ready' %}
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-clock"></i> في انتظار السائق
+                        </div>
+                        {% elif order.status in ['picked_up', 'delivering'] %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-motorcycle"></i> السائق: {{ order.driver.username if order.driver else 'غير محدد' }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not pending_orders and not active_orders %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-inbox fa-5x text-muted mb-4"></i>
+        <h4>لاتوجد طلبيات الآن</h4>
+        <p class="text-muted">نعلمك اذا وجدت طلبية جديدة</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.confirm-order-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            confirmOrder(orderId);
+        });
+    });
+    
+    document.querySelectorAll('.reject-order-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            rejectOrder(orderId);
+        });
+    });
+    
+    document.querySelectorAll('.mark-ready-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            markReady(orderId);
+        });
+    });
+});
+
+function confirmOrder(orderId) {
+    if (confirm('هل تقبل هذه الطلبية؟')) {
+        const btn = event.target.closest('button');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> انتضر...';
+        
+        fetch(`/restaurant/confirm_order/${orderId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✅ قبلت', data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert('غلط: ' + data.error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> اقبل';
+            }
+        });
+    }
+}
+
+function rejectOrder(orderId) {
+    const reason = prompt('لماذا رفضت الطلبية؟');
+    
+    if (reason && reason.trim() !== '') {
+        fetch(`/restaurant/reject_order/${orderId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('❌ رفضت', 'رفضت الطلبية');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+    }
+}
+
+function markReady(orderId) {
+    if (confirm('هل الطلبية جاهزة؟')) {
+        const btn = event.target.closest('button');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> انتضر...';
+        
+        fetch(`/restaurant/ready_order/${orderId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('✅ جاهزة', 'نعلمو السائقين');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+    }
+}
+
+socket.on('new_order', (data) => {
+    showToast('🔔 طلبية جديدة!', `طلبية رقم ${data.order_number}`);
+    
+    if (Notification.permission === "granted") {
+        new Notification("طلبية جديدة!", {
+            body: `طلبية رقم ${data.order_number} - ${data.total} د.ج`,
+        });
+    }
+    
+    setTimeout(() => location.reload(), 3000);
+});
+
+if (Notification.permission === "default") {
+    Notification.requestPermission();
+}
+
+function showToast(title, message) {
+    const toastHtml = `
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+            <div class="toast show" role="alert">
+                <div class="toast-header bg-success text-white">
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">${message}</div>
+            </div>
+        </div>
+    `;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = toastHtml;
+    document.body.appendChild(tempDiv);
+    setTimeout(() => tempDiv.remove(), 5000);
+}
+</script>
+{% endblock %}

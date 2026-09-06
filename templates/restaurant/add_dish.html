@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}أضف طبق جديد - {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus"></i> أضف طبق جديد
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <!-- Image Upload -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-image"></i> صورة الطبق *
+                        </label>
+                        <input type="file" class="form-control" name="image" 
+                               accept="image/*" id="imageInput" required>
+                        <small class="text-muted">الحجم الأقصى: 16MB - الأنواع المقبولة: JPG, PNG, GIF</small>
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreview" class="mt-3" style="display: none;">
+                            <img id="previewImg" src="" class="img-fluid rounded" 
+                                 style="max-height: 300px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Dish Name -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-utensils"></i> اسم الطبق *
+                        </label>
+                        <input type="text" class="form-control" name="name_ar" 
+                               placeholder="مثلاً: كسكسي بالدجاج" required>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-align-left"></i> الوصف
+                        </label>
+                        <textarea class="form-control" name="description_ar" rows="3"
+                                  placeholder="اكتب وصف للطبق..."></textarea>
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-tag"></i> السعر (د.ج) *
+                        </label>
+                        <input type="number" class="form-control" name="price" 
+                               step="0.01" min="0" placeholder="800.00" required>
+                    </div>
+                    
+                    <!-- Category -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-list"></i> التصنيف *
+                        </label>
+                        <select class="form-select" name="category_ar" required>
+                            <option value="">اختار التصنيف...</option>
+                            <option value="مقبلات">مقبلات</option>
+                            <option value="شوربة">شوربة</option>
+                            <option value="أطباق رئيسية">أطباق رئيسية</option>
+                            <option value="معكرونة">معكرونة</option>
+                            <option value="بيتزا">بيتزا</option>
+                            <option value="برغر">برغر</option>
+                            <option value="ساندويتشات">ساندويتشات</option>
+                            <option value="سلطات">سلطات</option>
+                            <option value="حلويات">حلويات</option>
+                            <option value="مشروبات">مشروبات</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Preparation Time -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-clock"></i> وقت التحضير (دقيقة)
+                        </label>
+                        <input type="number" class="form-control" name="preparation_time" 
+                               min="5" value="15" placeholder="15">
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> زيد الطبق
+                        </button>
+                        <a href="{{ url_for('restaurant_menu_management') }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Image Preview
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

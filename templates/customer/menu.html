@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+
+{% block title %}{{ restaurant.name_ar }} - القائمة{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Back Button -->
+        <div class="mb-3">
+            <a href="{{ url_for('customer_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right"></i> رجوع
+            </a>
+        </div>
+
+        <!-- Restaurant Info -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+
+                    <!-- ── FIXED: real restaurant image ── -->
+                    {% if restaurant.image_url %}
+                    <img src="{{ restaurant.image_url }}"
+                         style="width:80px;height:80px;object-fit:cover;border-radius:50%;flex-shrink:0;"
+                         alt="{{ restaurant.name_ar }}"
+                         onerror="this.style.display='none';">
+                    {% else %}
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:80px;height:80px;font-size:32px;">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    {% endif %}
+
+                    <div class="ms-3">
+                        <h2 class="mb-1">{{ restaurant.name_ar }}</h2>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-map-marker-alt"></i> {{ restaurant.address }}
+                        </p>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-map-pin"></i> {{ restaurant.wilaya }}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-phone"></i> {{ restaurant.phone }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu Items -->
+        <h4 class="mb-3"><i class="fas fa-list"></i> القائمة</h4>
+        
+        {% if menu_items %}
+            <div class="row" id="menuItems">
+                {% for item in menu_items %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100 menu-item-card">
+
+                        <!-- ── FIXED: real dish image ── -->
+                        {% if item.image_url %}
+                        <img src="{{ item.image_url }}"
+                             class="card-img-top"
+                             style="height:180px; object-fit:cover;"
+                             alt="{{ item.name_ar }}"
+                             onerror="this.style.display='none';">
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-center bg-light"
+                             style="height:180px; border-radius:4px 4px 0 0;">
+                            <i class="fas fa-utensils fa-3x text-muted"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="mb-0">{{ item.name_ar }}</h5>
+                                {% if item.category_ar %}
+                                <span class="badge bg-secondary">{{ item.category_ar }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if item.description_ar %}
+                            <p class="text-muted small mb-2">{{ item.description_ar }}</p>
+                            {% endif %}
+                            
+                            <h4 class="text-primary mb-3">
+                                {{ item.price|currency }}
+                            </h4>
+                            
+                            <div class="input-group mb-2">
+                                <button class="btn btn-outline-secondary btn-qty-minus" type="button" 
+                                        data-item-id="{{ item.id }}">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" class="form-control text-center qty-input" 
+                                       id="qty_{{ item.id }}" value="0" min="0" readonly 
+                                       style="max-width:60px;">
+                                <button class="btn btn-outline-secondary btn-qty-plus" type="button" 
+                                        data-item-id="{{ item.id }}">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <button class="btn btn-primary w-100 btn-add-to-cart" 
+                                    data-item-id="{{ item.id }}"
+                                    data-item-name="{{ item.name_ar }}"
+                                    data-item-price="{{ item.price }}">
+                                <i class="fas fa-cart-plus"></i> أضف للسلة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> لايوجد أكل الأن
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Shopping Cart — exactly the same as original -->
+    <div class="col-lg-4">
+        <div class="cart-summary sticky-top" style="top: 20px;">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart"></i> 
+                        السلة (<span id="cartCount">0</span>)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="cartItems" class="mb-3">
+                        <p class="text-muted text-center">السلة فارغة</p>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>المجموع:</span>
+                        <strong id="cartSubtotal">0 د.ج</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>التوصيل:</span>
+                        <strong>200 د.ج</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>خدمة:</span>
+                        <strong>50 د.ج</strong>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>المجموع الكلي:</strong>
+                        <strong class="text-primary" id="cartTotal">0 د.ج</strong>
+                    </div>
+                    <button class="btn btn-success w-100" id="checkoutBtn" disabled 
+                            data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                        <i class="fas fa-check"></i> كمّل الطلبية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Modal — exactly the same as original -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> كمّل الطلبية
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="checkoutForm">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-map-marker-alt"></i> عنوان التوصيل *
+                        </label>
+                        <textarea class="form-control" id="deliveryAddress" rows="3" 
+                                  placeholder="مثلاً: حي السلام، عمارة 12، الطابق 3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-credit-card"></i> اختر طريقة الدفع *
+                        </label>
+                        <select class="form-select" id="paymentMethod" required>
+                            <option value="cash">💵 كاش (نقداً)</option>
+                            <option value="cib_card">💳 بطاقة CIB</option>
+                            <option value="edahabia">💳 الذهبية Edahabia</option>
+                        </select>
+                    </div>
+                    <div id="cardPaymentFields" style="display:none;">
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-credit-card"></i> معلومات البطاقة
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">رقم البطاقة *</label>
+                                    <input type="text" class="form-control" id="cardNumber" 
+                                           placeholder="1234 5678 9012 3456" maxlength="19">
+                                    <small class="text-muted">أدخل 16 رقم</small>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">تاريخ الانتهاء *</label>
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <select class="form-select" id="cardExpiryMonth">
+                                                    <option value="">الشهر</option>
+                                                    <option value="01">01</option>
+                                                    <option value="02">02</option>
+                                                    <option value="03">03</option>
+                                                    <option value="04">04</option>
+                                                    <option value="05">05</option>
+                                                    <option value="06">06</option>
+                                                    <option value="07">07</option>
+                                                    <option value="08">08</option>
+                                                    <option value="09">09</option>
+                                                    <option value="10">10</option>
+                                                    <option value="11">11</option>
+                                                    <option value="12">12</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <select class="form-select" id="cardExpiryYear">
+                                                    <option value="">السنة</option>
+                                                    {% for year in range(2024, 2035) %}
+                                                    <option value="{{ year }}">{{ year }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">CVV *</label>
+                                        <input type="text" class="form-control" id="cardCVV" 
+                                               placeholder="123" maxlength="3">
+                                        <small class="text-muted">3 أرقام في ظهر البطاقة</small>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">الاسم على البطاقة</label>
+                                    <input type="text" class="form-control" id="cardholderName" 
+                                           placeholder="AHMED BEN ALI">
+                                </div>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-shield-alt"></i> الدفع آمن ومشفر 🔒
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="edahabiaPaymentFields" style="display:none;">
+                        <div class="card border-warning mb-3">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-credit-card"></i> معلومات بطاقة الذهبية
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">رقم البطاقة *</label>
+                                    <input type="text" class="form-control" id="edahabiaNumber" 
+                                           placeholder="1234 5678 9012 3456" maxlength="19">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">الرمز السري (PIN) *</label>
+                                    <input type="password" class="form-control" id="edahabiaPin" 
+                                           placeholder="****" maxlength="4">
+                                    <small class="text-muted">4 أرقام</small>
+                                </div>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    لا تشارك الرمز السري مع أي شخص
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-comment"></i> ملاحظات (اختياري)
+                        </label>
+                        <textarea class="form-control" id="orderNotes" rows="2" 
+                                  placeholder="عندك شي ملاحظة؟"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <h6 class="mb-2"><strong>ملخص الطلبية:</strong></h6>
+                        <div class="d-flex justify-content-between">
+                            <span>المجموع:</span>
+                            <span id="modalSubtotal">0 د.ج</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>التوصيل:</span>
+                            <span>200 د.ج</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>الخدمة:</span>
+                            <span>50 د.ج</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>المجموع الكلي:</strong>
+                            <strong class="text-primary" id="modalGrandTotal">0 د.ج</strong>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button type="button" class="btn btn-success" id="submitOrderBtn">
+                    <i class="fas fa-check"></i> تأكيد الطلب
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- exactly the same JavaScript as your original — zero changes -->
+<script>
+const RESTAURANT_ID = {{ restaurant.id }};
+const DELIVERY_FEE = 200;
+const PLATFORM_FEE = 50;
+let cart = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🍽️ قائمة المطعم:', RESTAURANT_ID);
+    
+    document.querySelectorAll('.btn-qty-minus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            updateQuantity(this.getAttribute('data-item-id'), -1);
+        });
+    });
+    
+    document.querySelectorAll('.btn-qty-plus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            updateQuantity(this.getAttribute('data-item-id'), 1);
+        });
+    });
+    
+    document.querySelectorAll('.btn-add-to-cart').forEach(btn => {
+        btn.addEventListener('click', function() {
+            addToCart(
+                this.getAttribute('data-item-id'),
+                this.getAttribute('data-item-name'),
+                parseFloat(this.getAttribute('data-item-price'))
+            );
+        });
+    });
+    
+    document.getElementById('paymentMethod').addEventListener('change', function() {
+        document.getElementById('cardPaymentFields').style.display     = 'none';
+        document.getElementById('edahabiaPaymentFields').style.display = 'none';
+        if (this.value === 'cib_card')   document.getElementById('cardPaymentFields').style.display     = 'block';
+        if (this.value === 'edahabia')   document.getElementById('edahabiaPaymentFields').style.display = 'block';
+    });
+    
+    const cardNumberInput = document.getElementById('cardNumber');
+    if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '');
+            e.target.value = value.match(/.{1,4}/g)?.join(' ') || value;
+        });
+    }
+    
+    const edahabiaNumberInput = document.getElementById('edahabiaNumber');
+    if (edahabiaNumberInput) {
+        edahabiaNumberInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s/g, '');
+            e.target.value = value.match(/.{1,4}/g)?.join(' ') || value;
+        });
+    }
+    
+    const cvvInput = document.getElementById('cardCVV');
+    if (cvvInput) {
+        cvvInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+    }
+    
+    const pinInput = document.getElementById('edahabiaPin');
+    if (pinInput) {
+        pinInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
+    }
+    
+    document.getElementById('submitOrderBtn').addEventListener('click', submitOrder);
+});
+
+function updateQuantity(itemId, change) {
+    const input = document.getElementById(`qty_${itemId}`);
+    let value = parseInt(input.value) + change;
+    if (value < 0) value = 0;
+    input.value = value;
+}
+
+function addToCart(itemId, itemName, itemPrice) {
+    const qty = parseInt(document.getElementById(`qty_${itemId}`).value);
+    if (qty <= 0) { alert('⚠️ اختر الكمية أولاً'); return; }
+    if (cart[itemId]) {
+        cart[itemId].quantity += qty;
+    } else {
+        cart[itemId] = { id: itemId, name: itemName, price: itemPrice, quantity: qty };
+    }
+    document.getElementById(`qty_${itemId}`).value = 0;
+    updateCartDisplay();
+    showToast('تمت ✅', `أضفنا ${itemName} للسلة`);
+}
+
+function removeFromCart(itemId) {
+    delete cart[itemId];
+    updateCartDisplay();
+}
+
+function updateCartDisplay() {
+    const cartItemsDiv = document.getElementById('cartItems');
+    let html = '', subtotal = 0, count = 0;
+    
+    for (let itemId in cart) {
+        const item = cart[itemId];
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        count    += item.quantity;
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                <div class="flex-grow-1">
+                    <strong>${item.name}</strong><br>
+                    <small class="text-muted">${item.quantity} × ${item.price.toLocaleString()} د.ج</small>
+                </div>
+                <div class="text-end">
+                    <strong class="text-primary">${itemTotal.toLocaleString()} د.ج</strong><br>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${itemId}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+    }
+    
+    cartItemsDiv.innerHTML = html || '<p class="text-muted text-center">السلة فارغة</p>';
+    document.getElementById('cartCount').textContent    = count;
+    document.getElementById('cartSubtotal').textContent = subtotal.toLocaleString() + ' د.ج';
+    
+    const grandTotal = subtotal + DELIVERY_FEE + PLATFORM_FEE;
+    document.getElementById('cartTotal').textContent       = grandTotal.toLocaleString() + ' د.ج';
+    document.getElementById('modalSubtotal').textContent   = subtotal.toLocaleString() + ' د.ج';
+    document.getElementById('modalGrandTotal').textContent = grandTotal.toLocaleString() + ' د.ج';
+    document.getElementById('checkoutBtn').disabled        = count === 0;
+}
+
+function validateCardDetails(paymentMethod) {
+    if (paymentMethod === 'cib_card') {
+        const cardNumber  = document.getElementById('cardNumber').value.replace(/\s/g, '');
+        const expiryMonth = document.getElementById('cardExpiryMonth').value;
+        const expiryYear  = document.getElementById('cardExpiryYear').value;
+        const cvv         = document.getElementById('cardCVV').value;
+        if (!cardNumber || cardNumber.length !== 16) { alert('⚠️ رقم البطاقة غير صحيح'); return null; }
+        if (!expiryMonth || !expiryYear)             { alert('⚠️ أدخل تاريخ انتهاء البطاقة'); return null; }
+        if (!cvv || cvv.length !== 3)                { alert('⚠️ CVV غير صحيح'); return null; }
+        return {
+            card_number:      cardNumber,
+            expiry_month:     expiryMonth,
+            expiry_year:      expiryYear,
+            cvv:              cvv,
+            cardholder_name:  document.getElementById('cardholderName').value
+        };
+    } else if (paymentMethod === 'edahabia') {
+        const cardNumber = document.getElementById('edahabiaNumber').value.replace(/\s/g, '');
+        const pin        = document.getElementById('edahabiaPin').value;
+        if (!cardNumber || cardNumber.length !== 16) { alert('⚠️ رقم البطاقة غير صحيح'); return null; }
+        if (!pin || pin.length !== 4)                { alert('⚠️ الرمز السري غير صحيح'); return null; }
+        return { card_number: cardNumber, pin: pin };
+    }
+    return {};
+}
+
+function submitOrder() {
+    const address       = document.getElementById('deliveryAddress').value.trim();
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const notes         = document.getElementById('orderNotes').value.trim();
+    
+    if (!address)                      { alert('⚠️ كتب العنوان'); return; }
+    if (Object.keys(cart).length === 0){ alert('⚠️ السلة فارغة'); return; }
+    
+    let cardDetails = null;
+    if (paymentMethod === 'cib_card' || paymentMethod === 'edahabia') {
+        cardDetails = validateCardDetails(paymentMethod);
+        if (!cardDetails) return;
+    }
+    
+    const submitBtn = document.getElementById('submitOrderBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
+    
+    const orderData = {
+        restaurant_id:    RESTAURANT_ID,
+        items:            Object.values(cart).map(item => ({ id: parseInt(item.id), quantity: item.quantity })),
+        delivery_address: address,
+        delivery_lat:     36.7538,
+        delivery_lng:     3.0588,
+        payment_method:   paymentMethod,
+        notes:            notes
+    };
+    if (cardDetails) orderData.card_details = cardDetails;
+    
+    fetch('/order/create', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(orderData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide();
+            let message = `✅ ${data.message}\n\n📋 رقم الطلبية: ${data.order_number}`;
+            if (data.verification_code) message += `\n🔐 الكود: ${data.verification_code}`;
+            if (data.transaction_id)    message += `\n💳 رقم العملية: ${data.transaction_id}`;
+            alert(message);
+            window.location.href = `/order/${data.order_id}/track`;
+        } else {
+            throw new Error(data.error || 'غلط في الطلب');
+        }
+    })
+    .catch(error => {
+        alert('❌ صرا غلط: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> تأكيد الطلب';
+    });
+}
+
+function showToast(title, message) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index:11">
+            <div class="toast show" role="alert">
+                <div class="toast-header bg-success text-white">
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">${message}</div>
+            </div>
+        </div>`;
+    document.body.appendChild(tempDiv);
+    setTimeout(() => tempDiv.remove(), 3000);
+}
+</script>
+{% endblock %}

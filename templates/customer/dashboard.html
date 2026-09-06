@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة الزبون - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-gradient" style="background: linear-gradient(135deg, #006633 0%, #008844 100%);">
+            <div class="card-body">
+                <h2><i class="fas fa-user-circle"></i> مرحبا، {{ current_user.username }}</h2>
+                <p class="mb-0">اطلب الماكلة اللي تحبها وتوصلك!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-center">
+                <i class="fas fa-shopping-bag fa-2x mb-2"></i>
+                <h5>كل الطلبيات</h5>
+                <h2>{{ orders|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h5>طلبيات وصلت</h5>
+                <h2>{{ orders|selectattr('status', 'equalto', 'delivered')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h5>طلبيات نشطة</h5>
+                <h2>{{ orders|rejectattr('status', 'equalto', 'delivered')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Orders -->
+{% set active_orders = orders|rejectattr('status', 'equalto', 'delivered')|list %}
+{% if active_orders %}
+<h4 class="mb-3"><i class="fas fa-fire"></i> طلبياتك النشطة</h4>
+<div class="row mb-4">
+    {% for order in active_orders %}
+    <div class="col-lg-6 mb-3">
+        <div class="card border-primary shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="mb-1">طلبية #{{ order.order_number }}</h5>
+                        <small class="text-muted">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                    <span class="badge status-{{ order.status }}">
+                        {% if order.status == 'pending' %}⏳ في الانتظار
+                        {% elif order.status == 'confirmed' %}✅ تأكدت
+                        {% elif order.status == 'ready' %}🍽️ جاهزة
+                        {% elif order.status == 'picked_up' %}🚗 السائق أخذها
+                        {% elif order.status == 'delivering' %}🏍️ في الطريق
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="mb-1"><i class="fas fa-store text-primary"></i> <strong>{{ order.restaurant.name_ar }}</strong></p>
+                    <p class="mb-1"><i class="fas fa-map-marker-alt text-danger"></i> {{ order.delivery_address }}</p>
+                    <p class="mb-1"><i class="fas fa-money-bill-wave text-success"></i> {{ order.final_amount|currency }}</p>
+                    {% if order.payment_method == 'cash' %}
+                        <span class="badge bg-info"><i class="fas fa-money-bill"></i> نقدا</span>
+                    {% else %}
+                        <span class="badge bg-primary"><i class="fas fa-credit-card"></i> بطاقة</span>
+                    {% endif %}
+                </div>
+                
+                {% if order.verification_code and order.status in ['picked_up', 'delivering'] and not order.is_verified %}
+                <div class="alert alert-warning mb-3">
+                    <p class="mb-2"><strong>كود التحقق:</strong></p>
+                    <div class="verification-code pulse">{{ order.verification_code }}</div>
+                    <small class="text-muted d-block text-center">تأكيد الرقم مع السائق</small>
+                </div>
+                {% endif %}
+                
+                {% if order.driver %}
+                <div class="alert alert-success mb-3">
+                    <p class="mb-1"><i class="fas fa-user"></i> <strong>السائق:</strong> {{ order.driver.username }}</p>
+                    <p class="mb-0"><i class="fas fa-phone"></i> {{ order.driver.phone }}</p>
+                </div>
+                {% endif %}
+                
+                <a href="{{ url_for('track_order', order_id=order.id) }}" class="btn btn-primary w-100">
+                    <i class="fas fa-map-marker-alt"></i> تتبع الطلبية
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Available Restaurants -->
+<h4 class="mb-3"><i class="fas fa-utensils"></i> المطاعم المتاحة</h4>
+<div class="row">
+    {% if restaurants %}
+        {% for restaurant in restaurants %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <!-- replace this block in customer dashboard restaurants loop -->
+                     <div class="d-flex align-items-center mb-3">
+                         <!-- BEFORE: generic icon -->
+                           <!-- AFTER: real restaurant image or fallback -->
+                     {% if restaurant.image_url %}
+                     <img src="{{ restaurant.image_url }}"
+                        style="width:60px;height:60px;object-fit:cover;border-radius:50%;"
+                                alt="{{ restaurant.name_ar }}">
+                      {% else %}
+                           <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                style="width:60px;height:60px;font-size:24px;">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                      {% endif %}
+    
+                        <div class="ms-3">
+                            <h5 class="mb-0">{{ restaurant.name_ar }}</h5>
+                            <small class="text-success"><i class="fas fa-check-circle"></i> مفتوح</small>
+                        </div>
+                    </div>
+                    
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-map-marker-alt"></i> {{ restaurant.address }}
+                    </p>
+                    <p class="mb-3">
+                        <i class="fas fa-map-pin"></i> <strong>{{ restaurant.wilaya }}</strong>
+                    </p>
+                    
+                    <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" 
+                       class="btn btn-primary w-100">
+                        <i class="fas fa-shopping-cart"></i> تصفح القائمة
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                <p class="mb-0">لاتوجد مطاعم </p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

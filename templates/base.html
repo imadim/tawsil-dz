@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}توصيل جزائري{% endblock %}</title>
+    
+    <!-- Bootstrap RTL CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts Arabic -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --dz-green: #006633;
+            --dz-red: #D21034;
+            --dz-white: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f8f9fa;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--dz-green) 0%, #008844 100%) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-primary {
+            background: var(--dz-green);
+            border-color: var(--dz-green);
+        }
+        
+        .btn-primary:hover {
+            background: #005522;
+            border-color: #005522;
+        }
+        
+        .btn-danger {
+            background: var(--dz-red);
+            border-color: var(--dz-red);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn {
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        
+        .badge {
+            padding: 8px 12px;
+            border-radius: 20px;
+        }
+        
+        #notifCount {
+            position: absolute;
+            top: -5px;
+            left: -10px;
+            font-size: 0.7rem;
+        }
+        
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+        
+        .timeline-item {
+            padding: 15px 20px 15px 50px;
+            position: relative;
+            margin-bottom: 10px;
+            border-right: 3px solid #dee2e6;
+            color: #999;
+        }
+        
+        .timeline-item.active {
+            border-right-color: var(--dz-green);
+            color: var(--dz-green);
+            font-weight: bold;
+        }
+        
+        .timeline-item i {
+            position: absolute;
+            right: -15px;
+            top: 15px;
+            background: white;
+            padding: 5px;
+            font-size: 20px;
+        }
+        
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 15px;
+        }
+        
+        .status-pending { background: #ffc107; }
+        .status-confirmed { background: #17a2b8; }
+        .status-ready { background: #6f42c1; }
+        .status-picked_up { background: #fd7e14; }
+        .status-delivering { background: #007bff; }
+        .status-delivered { background: var(--dz-green); }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--dz-green) 0%, #008844 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 60px 20px;
+            margin-bottom: 40px;
+            animation: fadeIn 1s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .cart-summary {
+            position: sticky;
+            top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .cart-summary {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: white;
+                border-top: 2px solid #dee2e6;
+                max-height: 40vh;
+                overflow-y: auto;
+                border-radius: 20px 20px 0 0;
+            }
+        }
+        
+        .verification-code {
+            font-size: 2.5rem;
+            font-weight: bold;
+            letter-spacing: 10px;
+            color: var(--dz-green);
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .dz-flag {
+            display: inline-block;
+            width: 30px;
+            height: 20px;
+            background: linear-gradient(to right, var(--dz-green) 50%, var(--dz-white) 50%, var(--dz-white) 50%, var(--dz-red) 50%);
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
+<script src="{{ url_for('static', filename='js/firebase-messaging.js') }}"></script>
+
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-motorcycle"></i> <strong>توصيل DZ</strong>
+                  <img 
+        src="https://flagcdn.com/w40/dz.png" 
+        alt="Algeria Flag" 
+        style="width: 30px; height: 20px; border-radius: 3px; margin-left: 5px; vertical-align: middle;"
+                 >
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="fas fa-user"></i> {{ current_user.username }}
+                            </a>
+                        </li>
+                        <li class="nav-item position-relative">
+                            <a class="nav-link" href="#" id="notificationBell" data-bs-toggle="modal" data-bs-target="#notificationModal">
+                                <i class="fas fa-bell"></i>
+                                <span class="badge bg-danger" id="notifCount" style="display: none;">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> خروج
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login') }}">
+                                <i class="fas fa-sign-in-alt"></i> دخول
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('register') }}">
+                                <i class="fas fa-user-plus"></i> تسجيل
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle"></i> {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container my-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <div class="container">
+            <p class="mb-2">
+                <img 
+        src="https://flagcdn.com/w40/dz.png" 
+        alt="Algeria Flag" 
+        style="width: 30px; height: 20px; border-radius: 3px; margin-left: 5px; vertical-align: middle;"
+                >
+                &copy; 2026 توصيل جزائري. كامل الحقوق محفوظة.
+            </p>
+            <p class="mb-0">
+                <i class="fas fa-phone"></i> 0550-123-456 | 
+                <i class="fas fa-envelope"></i> contact@delivery.dz
+            </p>
+        </div>
+    </footer>
+
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-bell"></i> الإشعارات
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="notificationList">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">تحميل...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
+                        <i class="fas fa-check-double"></i> تصفح الكل
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <!-- Main JavaScript -->
+    <script>
+        let socket;
+        
+        {% if current_user.is_authenticated %}
+        socket = io();
+        
+        socket.on('connect', () => {
+            console.log('✅ متصل بالخادم');
+        });
+        
+        socket.on('new_notification', (data) => {
+            showToast(data.title, data.message);
+            loadNotifications();
+        });
+        
+        socket.on('order_update', (data) => {
+            console.log('تحديث الطلبية:', data);
+            showToast('تحديث', 'تم تحديث الطلبية ');
+        });
+        {% endif %}
+        
+        function loadNotifications() {
+            fetch('/api/notifications')
+                .then(response => response.json())
+                .then(data => {
+                    const notifList = document.getElementById('notificationList');
+                    const notifCount = document.getElementById('notifCount');
+                    
+                    if (data.length === 0) {
+                        notifList.innerHTML = '<p class="text-center text-muted py-4">لاتوجد إشعارات</p>';
+                        notifCount.style.display = 'none';
+                        return;
+                    }
+                    
+                    const unreadCount = data.filter(n => !n.is_read).length;
+                    notifCount.textContent = unreadCount;
+                    notifCount.style.display = unreadCount > 0 ? 'inline' : 'none';
+                    
+                    let html = '';
+                    data.forEach(notif => {
+                        html += `
+                            <div class="alert alert-${notif.is_read ? 'secondary' : 'primary'} mb-2" 
+                                 onclick="markAsRead(${notif.id})" style="cursor: pointer;">
+                                <div class="d-flex justify-content-between">
+                                    <strong>${notif.title}</strong>
+                                    <small class="text-muted">${notif.created_at}</small>
+                                </div>
+                                <small>${notif.message}</small>
+                                ${notif.order_id ? `<br><small><a href="/order/${notif.order_id}/track" class="text-decoration-none">شوف الطلبية</a></small>` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    notifList.innerHTML = html;
+                });
+        }
+        
+        function markAsRead(notifId) {
+            fetch(`/api/notifications/${notifId}/read`, {
+                method: 'POST'
+            }).then(() => loadNotifications());
+        }
+        
+        function markAllAsRead() {
+            fetch('/api/notifications/mark_all_read', {
+                method: 'POST'
+            }).then(() => {
+                loadNotifications();
+                showToast('تم', 'تم الاطلاع على الكل');
+            });
+        }
+        
+        function showToast(title, message) {
+            const toastHtml = `
+                <div class="position-fixed bottom-0 start-0 p-3" style="z-index: 11">
+                    <div class="toast show" role="alert">
+                        <div class="toast-header bg-primary text-white">
+                            <strong class="me-auto">${title}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = toastHtml;
+            document.body.appendChild(tempDiv);
+            
+            setTimeout(() => {
+                tempDiv.remove();
+            }, 5000);
+        }
+        
+        {% if current_user.is_authenticated %}
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNotifications();
+            setInterval(loadNotifications, 30000);
+        });
+        {% endif %}
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}الصفحة الرئيسية - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center">
+    <h1 class="display-4">
+        <i class="fas fa-utensils"></i> مرحبا بيك في توصيل DZ
+    </h1>
+    <p class="lead">اطلب واش تحب تاكل وتوصلك في دقايق</p>
+    {% if not current_user.is_authenticated %}
+    <div class="mt-4">
+        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg mx-2">
+            <i class="fas fa-user-plus"></i> ابدأ الآن
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg mx-2">
+            <i class="fas fa-sign-in-alt"></i> دخول
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Features -->
+<div class="row text-center mb-5">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-bolt fa-3x text-primary mb-3"></i>
+                <h5>توصيل سريع</h5>
+                <p class="text-muted">طلبيتك توصلك في أقل من 30 دقيقة</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-map-marked-alt fa-3x text-success mb-3"></i>
+                <h5>تتبع مباشر</h5>
+                <p class="text-muted">تتبع احداثيات السائق  لحظة بلحظة</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <i class="fas fa-money-bill-wave fa-3x text-warning mb-3"></i>
+                <h5>خلاص مريح</h5>
+                <p class="text-muted">ادفع نقدا أو بالبطاقة</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restaurants -->
+<h2 class="mb-4">
+    <i class="fas fa-store"></i> المطاعم المتاحة
+    <span class="badge bg-primary">{{ restaurants|length }}</span>
+</h2>
+
+<div class="row">
+    {% if restaurants %}
+        {% for restaurant in restaurants %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm restaurant-card">
+
+                <!-- ── RESTAURANT IMAGE ── -->
+                {% if restaurant.image_url %}
+                <img src="{{ restaurant.image_url }}" 
+                     class="card-img-top" 
+                     style="height: 200px; object-fit: cover;" 
+                     alt="{{ restaurant.name_ar }}"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <!-- fallback shown if image fails to load -->
+                <div class="card-img-top bg-gradient text-white d-flex align-items-center justify-content-center" 
+                     style="height:200px; background:linear-gradient(135deg,#006400 0%,#004d00 100%); display:none !important;">
+                    <i class="fas fa-utensils fa-4x"></i>
+                </div>
+                {% else %}
+                <div class="card-img-top bg-gradient text-white d-flex align-items-center justify-content-center" 
+                     style="height: 200px; background: linear-gradient(135deg, #006400 0%, #004d00 100%);">
+                    <i class="fas fa-utensils fa-4x"></i>
+                </div>
+                {% endif %}
+
+                <!-- ── ADMIN UPLOAD BUTTON (only visible to admin) ── -->
+                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                <div class="px-2 pt-2">
+                    <form action="{{ url_for('upload_restaurant_image', restaurant_id=restaurant.id) }}" 
+                          method="POST" 
+                          enctype="multipart/form-data"
+                          class="d-flex gap-2 align-items-center">
+                        <input type="file" 
+                               name="image" 
+                               accept="image/*"
+                               class="form-control form-control-sm"
+                               onchange="this.form.submit()"
+                               style="font-size:12px;">
+                        <label class="text-muted small mb-0" style="white-space:nowrap;">
+                            <i class="fas fa-camera"></i> صورة
+                        </label>
+                    </form>
+                </div>
+                {% endif %}
+
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                             <h5 class="mb-1">
+                                <a href="{{ url_for('restaurant_profile', restaurant_id=restaurant.id) }}"
+                                         class="text-decoration-none text-dark">
+                                         {{ restaurant.name_ar }}
+                                 </a>
+                             </h5>
+                            {% if restaurant.name != restaurant.name_ar %}
+                            <small class="text-muted">{{ restaurant.name }}</small>
+                            {% endif %}
+                        </div>
+                        {% if restaurant.is_open %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle"></i> مفتوح
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times-circle"></i> مغلق
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if restaurant.description_ar %}
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle"></i> {{ restaurant.description_ar[:80] }}
+                        {% if restaurant.description_ar|length > 80 %}...{% endif %}
+                    </p>
+                    {% endif %}
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-map-marker-alt text-danger"></i> 
+                            {{ restaurant.wilaya }}{% if restaurant.commune %}, {{ restaurant.commune }}{% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-phone text-primary"></i> {{ restaurant.phone }}
+                        </small>
+                    </div>
+                    
+                    {% if restaurant.rating > 0 %}
+                    <div class="mb-3">
+                        <i class="fas fa-star text-warning"></i>
+                        <strong>{{ restaurant.rating }}</strong>
+                        <small class="text-muted">({{ restaurant.orders.count() }} طلبية)</small>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Menu Items Count -->
+                    <div class="mb-3">
+                        <small class="badge bg-light text-dark">
+                            <i class="fas fa-utensils"></i> 
+                            {{ restaurant.menu_items.filter_by(is_available=True).count() }} وجبة متاحة
+                        </small>
+                    </div>
+                    
+                    {% if current_user.is_authenticated and current_user.role == 'customer' %}
+                        {% if restaurant.is_open %}
+                        <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" 
+                           class="btn btn-primary w-100">
+                            <i class="fas fa-shopping-cart"></i> اطلب الآن
+                        </a>
+                        {% else %}
+                        <button class="btn btn-secondary w-100" disabled>
+                            <i class="fas fa-times"></i> المطعم مغلق
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-sign-in-alt"></i> أدخل وأطلب 
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info text-center py-5">
+                <i class="fas fa-info-circle fa-3x mb-3 d-block"></i>
+                <h4>لاتوجد مطاعم </h4>
+                <p class="mb-3">انتظر قليلا، المطاعم القريبة!</p>
+                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                <a href="{{ url_for('register') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> اضف مطعم
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Call to Action -->
+{% if not current_user.is_authenticated %}
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-primary text-white text-center">
+            <div class="card-body py-5">
+                <h3 class="mb-3">جاهز للبدأ؟</h3>
+                <p class="lead mb-4">سجل الآن وأطلب واش تحب تاكل</p>
+                <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-rocket"></i> سجل مجانا
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .restaurant-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    .restaurant-card .card-img-top {
+        transition: transform 0.3s ease;
+    }
+    .restaurant-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}

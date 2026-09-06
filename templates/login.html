@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}دخول - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <h3 class="text-center mb-4">
+                    <i class="fas fa-sign-in-alt"></i> دخول
+                </h3>
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-envelope"></i> الإيميل
+                        </label>
+                        <input type="email" name="email" class="form-control" 
+                               placeholder="example@email.dz" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-lock"></i> كلمة السر
+                        </label>
+                        <input type="password" name="password" class="form-control" 
+                               placeholder="********" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt"></i> دخول
+                    </button>
+                </form>
+                <hr>
+                <p class="text-center mb-0">
+                    لايوجد عندك حساب؟ 
+                    <a href="{{ url_for('register') }}">سجّل الآن</a>
+                </p>
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small class="text-muted d-block mb-2"><strong>حسابات للتجربة:</strong></small>
+                    <small class="d-block">👤 زبون: client@test.dz / client123</small>
+                    <small class="d-block">🚗 سائق: chauffeur@test.dz / chauffeur123</small>
+                    <small class="d-block">🍽️ مطعم: restaurant@test.dz / restaurant123</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

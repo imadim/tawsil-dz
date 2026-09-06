@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}الدفع - طلبية #{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Order Summary -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-shopping-cart"></i> ملخص الطلبية
+                </h4>
+            </div>
+            <div class="card-body">
+                <h5>طلبية #{{ order.order_number }}</h5>
+                <p class="text-muted">{{ order.restaurant.name_ar }}</p>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>المجموع:</span>
+                    <strong>{{ order.total_amount|currency }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>التوصيل:</span>
+                    <strong>{{ order.delivery_fee|currency }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>الخدمة:</span>
+                    <strong>{{ order.platform_fee|currency }}</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>المجموع الكلي:</strong>
+                    <strong class="text-primary" style="font-size: 24px;">
+                        {{ order.final_amount|currency }}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-credit-card"></i> اختار طريقة الدفع
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- CIB Card -->
+                <div class="payment-option mb-4">
+                    <button class="btn btn-outline-primary w-100 p-3" 
+                            onclick="selectPayment('cib')">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-credit-card fa-2x me-3"></i>
+                                <div class="text-start">
+                                    <strong>بطاقة CIB</strong>
+                                    <small class="d-block text-muted">البطاقة الذهبية الجزائرية</small>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-left"></i>
+                        </div>
+                    </button>
+                    
+                    <!-- CIB Form (Hidden by default) -->
+                    <div id="cibForm" class="mt-3" style="display: none;">
+                        <form id="cibPaymentForm">
+                            <div class="mb-3">
+                                <label class="form-label">رقم البطاقة</label>
+                                <input type="text" class="form-control" id="cibCardNumber" 
+                                       placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label">تاريخ الانتهاء</label>
+                                    <input type="text" class="form-control" id="cibExpiry" 
+                                           placeholder="MM/YY" maxlength="5" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="cibCVV" 
+                                           placeholder="123" maxlength="3" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mt-3">
+                                <i class="fas fa-lock"></i> ادفع {{ order.final_amount|currency }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Edahabia -->
+                <div class="payment-option mb-4">
+                    <button class="btn btn-outline-success w-100 p-3" 
+                            onclick="selectPayment('edahabia')">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-wallet fa-2x me-3"></i>
+                                <div class="text-start">
+                                    <strong>الذهبية</strong>
+                                    <small class="d-block text-muted">بطاقة بريد الجزائر</small>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-left"></i>
+                        </div>
+                    </button>
+                    
+                    <!-- Edahabia Form -->
+                    <div id="edahabiaForm" class="mt-3" style="display: none;">
+                        <form id="edahabiaPaymentForm">
+                            <div class="mb-3">
+                                <label class="form-label">رقم البطاقة</label>
+                                <input type="text" class="form-control" id="edahabiaCardNumber" 
+                                       placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الرمز السري</label>
+                                <input type="password" class="form-control" id="edahabiaPin" 
+                                       placeholder="****" maxlength="4" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-lock"></i> ادفع {{ order.final_amount|currency }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Cash on Delivery -->
+                <button class="btn btn-outline-warning w-100 p-3" 
+                        onclick="selectCash()">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-money-bill fa-2x me-3"></i>
+                            <div class="text-start">
+                                <strong>الدفع نقداً</strong>
+                                <small class="d-block text-muted">عند الاستلام</small>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-left"></i>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">جاري المعالجة...</span>
+                </div>
+                <h5>جاري معالجة الدفع...</h5>
+                <p class="text-muted">انتظر قليلا،...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const orderId = {{ order.id }};
+
+function selectPayment(method) {
+    // Hide all forms
+    document.getElementById('cibForm').style.display = 'none';
+    document.getElementById('edahabiaForm').style.display = 'none';
+    
+    // Show selected form
+    if (method === 'cib') {
+        document.getElementById('cibForm').style.display = 'block';
+    } else if (method === 'edahabia') {
+        document.getElementById('edahabiaForm').style.display = 'block';
+    }
+}
+
+function selectCash() {
+    if (confirm('هل تريد الدفع نقدا؟')) {
+        window.location.href = `/order/${orderId}/track`;
+    }
+}
+
+// CIB Payment
+document.getElementById('cibPaymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const cardNumber = document.getElementById('cibCardNumber').value.replace(/\s/g, '');
+    const expiry = document.getElementById('cibExpiry').value;
+    const cvv = document.getElementById('cibCVV').value;
+    
+    // Show loading
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+    
+    fetch('/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            order_id: orderId,
+            payment_method: 'cib',
+            card_details: {
+                card_number: cardNumber,
+                card_expiry: expiry,
+                card_cvv: cvv
+            }
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingModal.hide();
+        
+        if (data.success) {
+            alert(`✅ ${data.message}\nرقم العملية: ${data.transaction_id}`);
+            window.location.href = `/order/${orderId}/track`;
+        } else {
+            alert('❌ فشل الدفع: ' + data.error);
+        }
+    })
+    .catch(error => {
+        loadingModal.hide();
+        alert('❌ حدث خطأ: ' + error);
+    });
+});
+
+// Edahabia Payment
+document.getElementById('edahabiaPaymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const cardNumber = document.getElementById('edahabiaCardNumber').value.replace(/\s/g, '');
+    const pin = document.getElementById('edahabiaPin').value;
+    
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+    
+    fetch('/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            order_id: orderId,
+            payment_method: 'edahabia',
+            edahabia_details: {
+                card_number: cardNumber,
+                pin: pin
+            }
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingModal.hide();
+        
+        if (data.success) {
+            alert(`✅ ${data.message}\nرقم العملية: ${data.transaction_id}`);
+            window.location.href = `/order/${orderId}/track`;
+        } else {
+            alert('❌ فشل الدفع: ' + data.error);
+        }
+    })
+    .catch(error => {
+        loadingModal.hide();
+        alert('❌ حدث خطأ: ' + error);
+    });
+});
+
+// Format card number input
+document.getElementById('cibCardNumber').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '');
+    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+    e.target.value = formattedValue;
+});
+
+document.getElementById('edahabiaCardNumber').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '');
+    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+    e.target.value = formattedValue;
+});
+
+// Format expiry date
+document.getElementById('cibExpiry').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+    }
+    e.target.value = value;
+});
+</script>
+{% endblock %}

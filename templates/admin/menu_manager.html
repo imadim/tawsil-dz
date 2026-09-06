@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+{% block title %}إدارة قائمة {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div>
+        <h3 class="fw-bold mb-0 fs-5 fs-md-3">
+            <i class="fas fa-utensils text-success"></i>
+            قائمة {{ restaurant.name_ar }}
+        </h3>
+        <small class="text-muted">
+            <i class="fas fa-map-marker-alt"></i> {{ restaurant.wilaya }}
+        </small>
+    </div>
+    <a href="{{ url_for('admin_grand_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-right"></i> رجوع للوحة التحكم
+    </a>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Mobile: Collapsible Add Form Button                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="d-block d-lg-none mb-3">
+    <button class="btn btn-success w-100 fw-bold"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#addDishFormMobile"
+            aria-expanded="false">
+        <i class="fas fa-plus-circle"></i> إضافة طبق جديد
+    </button>
+
+    <div class="collapse mt-2" id="addDishFormMobile">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white fw-bold">
+                <i class="fas fa-plus-circle"></i> إضافة طبق جديد
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('admin_add_menu_item', restaurant_id=restaurant.id) }}"
+                      method="POST"
+                      enctype="multipart/form-data">
+
+                    <div class="row g-2">
+                        <!-- dish name arabic -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">
+                                اسم الطبق بالعربية <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="name_ar" class="form-control form-control-sm"
+                                   placeholder="مثال: دجاج مشوي" required>
+                        </div>
+
+                        <!-- dish name french -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">الاسم بالفرنسية</label>
+                            <input type="text" name="name" class="form-control form-control-sm"
+                                   placeholder="Poulet grillé">
+                        </div>
+
+                        <!-- price + category -->
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">
+                                السعر (دج) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" name="price" class="form-control form-control-sm"
+                                   placeholder="500" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small">الفئة</label>
+                            <select name="category" class="form-select form-select-sm">
+                                <option value="">-- الفئة --</option>
+                                <option value="أطباق رئيسية">🍽️ أطباق رئيسية</option>
+                                <option value="مشروبات">🥤 مشروبات</option>
+                                <option value="حلويات">🍰 حلويات</option>
+                                <option value="مقبلات">🥗 مقبلات</option>
+                                <option value="وجبات سريعة">🍔 وجبات سريعة</option>
+                                <option value="بيتزا">🍕 بيتزا</option>
+                                <option value="دجاج">🍗 دجاج</option>
+                                <option value="أخرى">📦 أخرى</option>
+                            </select>
+                        </div>
+
+                        <!-- description -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">وصف الطبق</label>
+                            <textarea name="description" class="form-control form-control-sm" rows="2"
+                                      placeholder="وصف مختصر للطبق..."></textarea>
+                        </div>
+
+                        <!-- image -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small">صورة الطبق</label>
+                            <input type="file" name="image" class="form-control form-control-sm"
+                                   accept="image/png,image/jpg,image/jpeg,image/webp"
+                                   onchange="previewNewDish(this, 'newDishPreviewMobile')">
+                            <img id="newDishPreviewMobile"
+                                 src="" alt=""
+                                 class="mt-2 rounded w-100"
+                                 style="height:100px;object-fit:cover;display:none;">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 fw-bold mt-3">
+                        <i class="fas fa-plus"></i> إضافة الطبق
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Desktop + Mobile Layout                                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="row g-4">
+
+    <!-- ── LEFT: Add New Dish Form (Desktop Only) ── -->
+    <div class="col-lg-4 d-none d-lg-block">
+        <div class="card border-0 shadow-sm sticky-top" style="top:20px;">
+            <div class="card-header bg-success text-white fw-bold">
+                <i class="fas fa-plus-circle"></i> إضافة طبق جديد
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('admin_add_menu_item', restaurant_id=restaurant.id) }}"
+                      method="POST"
+                      enctype="multipart/form-data">
+
+                    <!-- dish name arabic -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            اسم الطبق بالعربية <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="name_ar" class="form-control"
+                               placeholder="مثال: دجاج مشوي" required>
+                    </div>
+
+                    <!-- dish name french -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الاسم بالفرنسية</label>
+                        <input type="text" name="name" class="form-control"
+                               placeholder="Poulet grillé">
+                    </div>
+
+                    <!-- price -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            السعر (دج) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="price" class="form-control"
+                               placeholder="500" min="0" step="0.01" required>
+                    </div>
+
+                    <!-- category -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الفئة</label>
+                        <select name="category" class="form-select">
+                            <option value="">-- اختر الفئة --</option>
+                            <option value="أطباق رئيسية">🍽️ أطباق رئيسية</option>
+                            <option value="مشروبات">🥤 مشروبات</option>
+                            <option value="حلويات">🍰 حلويات</option>
+                            <option value="مقبلات">🥗 مقبلات</option>
+                            <option value="وجبات سريعة">🍔 وجبات سريعة</option>
+                            <option value="بيتزا">🍕 بيتزا</option>
+                            <option value="دجاج">🍗 دجاج</option>
+                            <option value="أخرى">📦 أخرى</option>
+                        </select>
+                    </div>
+
+                    <!-- description -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">وصف الطبق</label>
+                        <textarea name="description" class="form-control" rows="2"
+                                  placeholder="وصف مختصر للطبق..."></textarea>
+                    </div>
+
+                    <!-- image -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">صورة الطبق</label>
+                        <input type="file" name="image" class="form-control"
+                               accept="image/png,image/jpg,image/jpeg,image/webp"
+                               onchange="previewNewDish(this, 'newDishPreview')">
+                        <img id="newDishPreview"
+                             src="" alt=""
+                             class="mt-2 rounded w-100"
+                             style="height:120px;object-fit:cover;display:none;">
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="fas fa-plus"></i> إضافة الطبق
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: Menu Items ── -->
+    <div class="col-lg-8 col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="fw-bold mb-0 fs-6 fs-md-5">
+                    <i class="fas fa-list text-primary"></i>
+                    قائمة الأطباق
+                    <span class="badge bg-primary ms-2">{{ menu_items|length }}</span>
+                </h5>
+                <!-- search -->
+                <input type="text" id="dishSearch" class="form-control form-control-sm"
+                       style="max-width:180px;"
+                       placeholder="🔍 بحث..."
+                       onkeyup="filterDishes()">
+            </div>
+            <div class="card-body p-0">
+
+                {% if menu_items %}
+
+                <!-- ══════════════════════════════ -->
+                <!-- Desktop Table                  -->
+                <!-- ══════════════════════════════ -->
+                <div class="d-none d-md-block">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="dishesTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>الصورة</th>
+                                    <th>اسم الطبق</th>
+                                    <th>الفئة</th>
+                                    <th>السعر</th>
+                                    <th>الحالة</th>
+                                    <th class="text-center">العمليات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in menu_items %}
+                                <tr id="row_{{ item.id }}">
+                                    <!-- image cell -->
+                                    <td>
+                                        <div style="position:relative;width:60px;">
+                                            {% if item.image_url %}
+                                            <img src="{{ item.image_url }}"
+                                                 style="width:60px;height:60px;object-fit:cover;border-radius:10px;"
+                                                 id="dishImg_{{ item.id }}"
+                                                 alt="{{ item.name_ar }}">
+                                            {% else %}
+                                            <div style="width:60px;height:60px;background:#f0f0f0;
+                                                        border-radius:10px;display:flex;
+                                                        align-items:center;justify-content:center;"
+                                                 id="dishImg_{{ item.id }}">
+                                                <i class="fas fa-image text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                            <form action="{{ url_for('admin_upload_menu_image', item_id=item.id) }}"
+                                                  method="POST"
+                                                  enctype="multipart/form-data"
+                                                  id="imgForm_{{ item.id }}">
+                                                <input type="file"
+                                                       id="imgFile_{{ item.id }}"
+                                                       name="image"
+                                                       accept="image/*"
+                                                       style="display:none;"
+                                                       onchange="uploadDishImage({{ item.id }})">
+                                                <button type="button"
+                                                        onclick="document.getElementById('imgFile_{{ item.id }}').click()"
+                                                        style="position:absolute;bottom:-5px;right:-5px;
+                                                               width:22px;height:22px;border-radius:50%;
+                                                               border:none;background:#2196F3;color:white;
+                                                               font-size:10px;cursor:pointer;
+                                                               display:flex;align-items:center;justify-content:center;">
+                                                    <i class="fas fa-camera"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+
+                                    <!-- name -->
+                                    <td>
+                                        <strong class="text-dark">{{ item.name_ar }}</strong>
+                                        {% if item.name and item.name != item.name_ar %}
+                                        <br><small class="text-muted">{{ item.name }}</small>
+                                        {% endif %}
+                                        {% if item.description_ar %}
+                                        <br><small class="text-muted">{{ item.description_ar[:40] }}...</small>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- category -->
+                                    <td>
+                                        {% if item.category %}
+                                        <span class="badge bg-light text-dark border">
+                                            {{ item.category }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted small">–</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- price -->
+                                    <td class="fw-bold text-success">
+                                        {{ item.price }} دج
+                                    </td>
+
+                                    <!-- status -->
+                                    <td>
+                                        {% if item.is_available %}
+                                        <span class="badge bg-success">✅ متاح</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">🔴 غير متاح</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- actions -->
+                                    <td class="text-center">
+                                        <div class="d-flex gap-1 justify-content-center">
+                                            <a href="{{ url_for('admin_toggle_menu_item', item_id=item.id) }}"
+                                               class="btn btn-sm {% if item.is_available %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                                {% if item.is_available %}إخفاء{% else %}إظهار{% endif %}
+                                            </a>
+                                            <a href="{{ url_for('admin_delete_menu_item', item_id=item.id) }}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               onclick="return confirm('تأكيد حذف {{ item.name_ar }}؟')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════ -->
+                <!-- Mobile Cards                   -->
+                <!-- ══════════════════════════════ -->
+                <div class="d-block d-md-none p-2" id="dishesTableMobile">
+                    {% for item in menu_items %}
+                    <div class="card mb-2 border shadow-sm dish-card" id="row_{{ item.id }}">
+                        <div class="card-body p-2">
+                            <div class="d-flex gap-3 align-items-start">
+
+                                <!-- Image -->
+                                <div style="position:relative;flex-shrink:0;">
+                                    {% if item.image_url %}
+                                    <img src="{{ item.image_url }}"
+                                         style="width:70px;height:70px;object-fit:cover;border-radius:10px;"
+                                         id="dishImg_mob_{{ item.id }}"
+                                         alt="{{ item.name_ar }}">
+                                    {% else %}
+                                    <div style="width:70px;height:70px;background:#f0f0f0;
+                                                border-radius:10px;display:flex;
+                                                align-items:center;justify-content:center;"
+                                         id="dishImg_mob_{{ item.id }}">
+                                        <i class="fas fa-image text-muted fa-lg"></i>
+                                    </div>
+                                    {% endif %}
+                                    <!-- Camera upload button -->
+                                    <form action="{{ url_for('admin_upload_menu_image', item_id=item.id) }}"
+                                          method="POST"
+                                          enctype="multipart/form-data"
+                                          id="imgFormMob_{{ item.id }}">
+                                        <input type="file"
+                                               id="imgFileMob_{{ item.id }}"
+                                               name="image"
+                                               accept="image/*"
+                                               style="display:none;"
+                                               onchange="uploadDishImageMobile({{ item.id }})">
+                                        <button type="button"
+                                                onclick="document.getElementById('imgFileMob_{{ item.id }}').click()"
+                                                style="position:absolute;bottom:-5px;right:-5px;
+                                                       width:24px;height:24px;border-radius:50%;
+                                                       border:none;background:#2196F3;color:white;
+                                                       font-size:11px;cursor:pointer;
+                                                       display:flex;align-items:center;justify-content:center;">
+                                            <i class="fas fa-camera"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Info -->
+                                <div class="flex-fill min-width-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong class="text-dark d-block">{{ item.name_ar }}</strong>
+                                            {% if item.name and item.name != item.name_ar %}
+                                            <small class="text-muted">{{ item.name }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <span class="fw-bold text-success ms-2 text-nowrap">
+                                            {{ item.price }} دج
+                                        </span>
+                                    </div>
+
+                                    {% if item.description_ar %}
+                                    <small class="text-muted d-block mt-1">
+                                        {{ item.description_ar[:50] }}...
+                                    </small>
+                                    {% endif %}
+
+                                    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-1">
+                                        <div class="d-flex gap-1 align-items-center">
+                                            {% if item.category %}
+                                            <span class="badge bg-light text-dark border small">
+                                                {{ item.category }}
+                                            </span>
+                                            {% endif %}
+                                            {% if item.is_available %}
+                                            <span class="badge bg-success small">✅ متاح</span>
+                                            {% else %}
+                                            <span class="badge bg-danger small">🔴 غير متاح</span>
+                                            {% endif %}
+                                        </div>
+                                        <!-- Actions -->
+                                        <div class="d-flex gap-1">
+                                            <a href="{{ url_for('admin_toggle_menu_item', item_id=item.id) }}"
+                                               class="btn btn-sm {% if item.is_available %}btn-outline-warning{% else %}btn-outline-success{% endif %} px-2">
+                                                {% if item.is_available %}إخفاء{% else %}إظهار{% endif %}
+                                            </a>
+                                            <a href="{{ url_for('admin_delete_menu_item', item_id=item.id) }}"
+                                               class="btn btn-sm btn-outline-danger px-2"
+                                               onclick="return confirm('تأكيد حذف {{ item.name_ar }}؟')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-utensils fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">ماكاش أطباق بعد</h5>
+                    <p class="text-muted">أضف أول طبق من النموذج
+                        <span class="d-none d-lg-inline">على اليسار</span>
+                        <span class="d-inline d-lg-none">بالضغط على الزر أعلاه</span>
+                    </p>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// preview new dish image before upload
+function previewNewDish(input, previewId) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById(previewId);
+        preview.src   = e.target.result;
+        preview.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+// upload existing dish image - Desktop
+function uploadDishImage(itemId) {
+    const fileInput = document.getElementById('imgFile_' + itemId);
+    if (!fileInput.files || !fileInput.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const cell = document.getElementById('dishImg_' + itemId);
+        if (cell.tagName === 'IMG') {
+            cell.src = e.target.result;
+        } else {
+            const img = document.createElement('img');
+            img.src   = e.target.result;
+            img.id    = 'dishImg_' + itemId;
+            img.style = 'width:60px;height:60px;object-fit:cover;border-radius:10px;';
+            cell.replaceWith(img);
+        }
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+    document.getElementById('imgForm_' + itemId).submit();
+}
+
+// upload existing dish image - Mobile
+function uploadDishImageMobile(itemId) {
+    const fileInput = document.getElementById('imgFileMob_' + itemId);
+    if (!fileInput.files || !fileInput.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const cell = document.getElementById('dishImg_mob_' + itemId);
+        if (cell.tagName === 'IMG') {
+            cell.src = e.target.result;
+        } else {
+            const img = document.createElement('img');
+            img.src   = e.target.result;
+            img.id    = 'dishImg_mob_' + itemId;
+            img.style = 'width:70px;height:70px;object-fit:cover;border-radius:10px;';
+            cell.replaceWith(img);
+        }
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+    document.getElementById('imgFormMob_' + itemId).submit();
+}
+
+// search dishes - works on both desktop and mobile
+function filterDishes() {
+    const filter = document.getElementById('dishSearch').value.toLowerCase();
+
+    // Desktop table rows
+    document.querySelectorAll('#dishesTable tbody tr').forEach(function(row) {
+        row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+
+    // Mobile cards
+    document.querySelectorAll('#dishesTableMobile .dish-card').forEach(function(card) {
+        card.style.display = card.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}
