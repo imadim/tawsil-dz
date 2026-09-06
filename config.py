@@ -106,5 +106,3 @@ class ProductionConfig(Config):
     # Flask settings
     BASE_DIR = BASE_DIR
  
-    # Add to Config class
-    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'YOUR_API_KEY_HERE')
