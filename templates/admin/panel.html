@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة الإدارة - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="ap-head">
+    <div>
+        <h1>لوحة الإدارة</h1>
+        <p>إدارة الحسابات والمطاعم والطلبات وسياسة التسعير</p>
+    </div>
+    <a href="{{ url_for('admin_grand_dashboard') }}" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-chart-line"></i> الإحصائيات المالية
+    </a>
+</div>
+
+<div class="ap-stats">
+    <div class="ap-stat"><span>{{ counts.customer }}</span><small>زبون</small></div>
+    <div class="ap-stat"><span>{{ counts.driver }}</span><small>سائق</small></div>
+    <div class="ap-stat on"><span>{{ counts.drivers_on }}</span><small>سائق متاح الآن</small></div>
+    <div class="ap-stat"><span>{{ counts.restaurant }}</span><small>مطعم</small></div>
+    <div class="ap-stat"><span>{{ counts.orders }}</span><small>طلب</small></div>
+    <div class="ap-stat warn"><span>{{ counts.suspended }}</span><small>حساب موقوف</small></div>
+</div>
+
+<ul class="nav nav-tabs ap-tabs" role="tablist">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-users">الحسابات</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-rest">المطاعم</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-orders">الطلبات</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pricing">التسعير</button></li>
+</ul>
+
+<div class="tab-content">
+
+    <!-- ═══ الحسابات ═══ -->
+    <div class="tab-pane fade show active" id="tab-users">
+        <form class="ap-filter" method="get">
+            <input type="text" name="q" value="{{ q }}" placeholder="ابحث بالاسم أو البريد أو الهاتف...">
+            <select name="role">
+                <option value="">كل الأدوار</option>
+                <option value="customer"   {% if role=='customer' %}selected{% endif %}>الزبائن</option>
+                <option value="driver"     {% if role=='driver' %}selected{% endif %}>السائقون</option>
+                <option value="restaurant" {% if role=='restaurant' %}selected{% endif %}>أصحاب المطاعم</option>
+                <option value="admin"      {% if role=='admin' %}selected{% endif %}>المشرفون</option>
+            </select>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-filter"></i> تصفية</button>
+            {% if q or role %}<a href="{{ url_for('admin_panel') }}" class="btn btn-light btn-sm">إلغاء</a>{% endif %}
+        </form>
+
+        <div class="table-responsive">
+        <table class="ap-table">
+            <thead><tr>
+                <th>المستخدم</th><th>الدور</th><th>الاتصال</th><th>الولاية</th>
+                <th>الحالة</th><th>التسجيل</th><th>إجراءات</th>
+            </tr></thead>
+            <tbody>
+            {% for u in users %}
+            <tr>
+                <td><b>{{ u.username }}</b><br><small>{{ u.email }}</small></td>
+                <td>
+                    {% if u.role == 'customer' %}<span class="tag t-cus">زبون</span>
+                    {% elif u.role == 'driver' %}<span class="tag t-drv">سائق</span>
+                        {% if u.is_available %}<span class="dot on" title="متاح"></span>{% else %}<span class="dot" title="غير متاح"></span>{% endif %}
+                    {% elif u.role == 'restaurant' %}<span class="tag t-res">مطعم</span>
+                    {% else %}<span class="tag t-adm">مشرف</span>{% endif %}
+                </td>
+                <td dir="ltr" style="text-align:right">{{ u.phone }}</td>
+                <td>{{ u.wilaya or '—' }}</td>
+                <td>{% if u.is_active %}<span class="badge bg-success">نشط</span>{% else %}<span class="badge bg-secondary">موقوف</span>{% endif %}</td>
+                <td><small>{{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '—' }}</small></td>
+                <td class="acts">
+                    <a href="{{ url_for('admin_toggle_user', u_id=u.id) }}" class="ic" title="{{ 'إيقاف' if u.is_active else 'تفعيل' }}">
+                        <i class="fas fa-{{ 'ban' if u.is_active else 'circle-check' }}"></i>
+                    </a>
+                    {% if u.role != 'admin' %}
+                    <a href="{{ url_for('admin_delete_user', u_id=u.id) }}" class="ic danger" title="حذف"
+                       onclick="return confirm('حذف حساب {{ u.username }} نهائياً؟')">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">لا توجد حسابات مطابقة</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- ═══ المطاعم ═══ -->
+    <div class="tab-pane fade" id="tab-rest">
+        <div class="table-responsive">
+        <table class="ap-table">
+            <thead><tr>
+                <th>المطعم</th><th>التصنيف</th><th>الموقع</th><th>الهاتف</th>
+                <th>الأطباق</th><th>العمولة</th><th>الحالة</th><th>إجراءات</th>
+            </tr></thead>
+            <tbody>
+            {% for r in restaurants %}
+            <tr>
+                <td><b>{{ r.name_ar }}</b><br><small>{{ r.name }}</small></td>
+                <td><span class="tag t-res">{{ r.cuisine or 'أخرى' }}</span></td>
+                <td>{{ r.wilaya }}{% if r.commune %} · {{ r.commune }}{% endif %}</td>
+                <td dir="ltr" style="text-align:right">{{ r.phone or '—' }}</td>
+                <td>{{ r.menu_items.count() }}</td>
+                <td>{{ r.commission_rate }}٪</td>
+                <td>{% if r.is_open %}<span class="badge bg-success">مفتوح</span>{% else %}<span class="badge bg-secondary">مغلق</span>{% endif %}</td>
+                <td class="acts">
+                    <a href="{{ url_for('admin_menu', restaurant_id=r.id) }}" class="ic" title="القائمة"><i class="fas fa-list"></i></a>
+                    <a href="{{ url_for('admin_toggle_restaurant', r_id=r.id) }}" class="ic" title="فتح/غلق"><i class="fas fa-power-off"></i></a>
+                    <a href="{{ url_for('restaurant_profile', restaurant_id=r.id) }}" class="ic" title="معاينة"><i class="fas fa-eye"></i></a>
+                    <a href="{{ url_for('admin_delete_restaurant', r_id=r.id) }}" class="ic danger" title="حذف"
+                       onclick="return confirm('حذف مطعم {{ r.name_ar }} وحساب صاحبه نهائياً؟')">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty">لا توجد مطاعم</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- ═══ الطلبات ═══ -->
+    <div class="tab-pane fade" id="tab-orders">
+        <div class="table-responsive">
+        <table class="ap-table">
+            <thead><tr>
+                <th>رقم الطلب</th><th>الزبون</th><th>المطعم</th><th>السائق</th>
+                <th>المبلغ</th><th>التوصيل</th><th>الحالة</th><th>التاريخ</th>
+            </tr></thead>
+            <tbody>
+            {% for o in orders %}
+            <tr>
+                <td><small dir="ltr">{{ o.order_number }}</small></td>
+                <td>{{ o.customer.username if o.customer else '—' }}</td>
+                <td>{{ o.restaurant.name_ar if o.restaurant else '—' }}</td>
+                <td>{{ o.driver.username if o.driver else '—' }}</td>
+                <td>{{ o.total_amount|currency }}</td>
+                <td>{{ o.delivery_fee|currency }}</td>
+                <td><span class="st st-{{ o.status }}">{{ o.status }}</span></td>
+                <td><small>{{ o.created_at.strftime('%m-%d %H:%M') if o.created_at else '—' }}</small></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty">لا توجد طلبات</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- ═══ التسعير ═══ -->
+    <div class="tab-pane fade" id="tab-pricing">
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <form method="POST" action="{{ url_for('admin_save_pricing') }}" class="ap-card">
+                    <h5>الرسوم الأساسية</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label>رسم التوصيل الأساسي (د.ج)</label>
+                            <input type="number" step="10" name="base_fee" value="{{ pricing.base_fee|int }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>زيادة عن كل كيلومتر (د.ج)</label>
+                            <input type="number" step="1" name="per_km" value="{{ pricing.per_km|int }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>رسم خدمة المنصة (د.ج)</label>
+                            <input type="number" step="10" name="platform_fee" value="{{ pricing.platform_fee|int }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>عمولة المنصة على المطعم (٪)</label>
+                            <input type="number" step="0.5" name="commission" value="{{ pricing.commission }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>أدنى رسم توصيل (د.ج)</label>
+                            <input type="number" step="10" name="min_fee" value="{{ pricing.min_fee|int }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>أقصى رسم توصيل (د.ج)</label>
+                            <input type="number" step="10" name="max_fee" value="{{ pricing.max_fee|int }}">
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">سياسة العرض والطلب</h5>
+                    <p class="hint">عندما يزيد عدد الطلبات المنتظرة على عدد السائقين المتاحين، يرتفع رسم التوصيل تلقائياً
+                       لتشجيع السائقين على العمل — وتعود الزيادة إلى السائق حسب النسبة أدناه.</p>
+
+                    <label class="sw">
+                        <input type="checkbox" name="surge_enabled" {% if pricing.surge_enabled %}checked{% endif %}>
+                        <span>تفعيل التسعير حسب الضغط</span>
+                    </label>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label>عتبة الضغط (طلب لكل سائق)</label>
+                            <input type="number" step="0.1" name="surge_threshold" value="{{ pricing.surge_threshold }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>نسبة الزيادة لكل درجة</label>
+                            <input type="number" step="0.05" name="surge_step" value="{{ pricing.surge_step }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>أقصى مضاعف</label>
+                            <input type="number" step="0.1" name="surge_max" value="{{ pricing.surge_max }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label>حصّة السائق من الزيادة (٪)</label>
+                            <input type="number" step="5" name="driver_share" value="{{ pricing.driver_share|int }}">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary mt-4" type="submit">
+                        <i class="fas fa-floppy-disk"></i> حفظ الإعدادات
+                    </button>
+                </form>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="ap-card live">
+                    <h5>حالة السوق الآن</h5>
+                    <div class="live-row"><span>طلبات في الانتظار</span><b>{{ demand.waiting_orders }}</b></div>
+                    <div class="live-row"><span>سائقون متاحون</span><b>{{ demand.available_drivers }}</b></div>
+                    <div class="live-row"><span>نسبة الضغط</span><b>{{ demand.ratio }}</b></div>
+                    <hr>
+                    <div class="live-row"><span>المضاعف المطبَّق</span>
+                        <b class="{% if quote.surge %}up{% endif %}">×{{ quote.multiplier }}</b></div>
+                    <div class="live-row"><span>رسم التوصيل الحالي</span><b>{{ quote.delivery_fee|currency }}</b></div>
+                    <div class="live-row"><span>منها مكافأة للسائق</span><b>{{ quote.driver_bonus|currency }}</b></div>
+
+                    {% if quote.surge %}
+                    <div class="live-note up">الطلب مرتفع — السعر مضاعف لجذب سائقين إضافيين</div>
+                    {% else %}
+                    <div class="live-note">السوق متوازن — السعر عند حدّه الأساسي</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.ap-head {
+    background: linear-gradient(135deg, #12201a 0%, #2c4638 100%); color: #fff;
+    border-radius: 20px; padding: 30px 32px; margin-bottom: 22px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.ap-head h1 { font-weight: 800; font-size: 1.7rem; margin: 0 0 4px; }
+.ap-head p { margin: 0; color: rgba(255,255,255,.72); font-size: .92rem; }
+
+.ap-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+.ap-stat {
+    background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 18px 14px; text-align: center;
+}
+.ap-stat span { display: block; font-size: 1.6rem; font-weight: 800; color: #12201a; line-height: 1.2; }
+.ap-stat small { color: #7b8c84; font-size: .8rem; }
+.ap-stat.on span { color: #006633; }
+.ap-stat.warn span { color: #D21034; }
+
+.ap-tabs { border-bottom: 2px solid #e6ede9; margin-bottom: 22px; gap: 4px; }
+.ap-tabs .nav-link {
+    border: 0; color: #7b8c84; font-weight: 700; font-size: .95rem; padding: 11px 20px; border-radius: 11px 11px 0 0;
+}
+.ap-tabs .nav-link.active { color: #006633; background: #eef4f0; border-bottom: 3px solid #006633; }
+
+.ap-filter { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.ap-filter input, .ap-filter select {
+    border: 1px solid #e2eae6; border-radius: 11px; padding: 9px 14px;
+    font-family: inherit; font-size: .92rem; background: #fafcfb;
+}
+.ap-filter input { flex: 1 1 260px; }
+.ap-filter input:focus, .ap-filter select:focus { outline: none; border-color: #006633; background: #fff; }
+
+.ap-table { width: 100%; background: #fff; border-radius: 15px; overflow: hidden; border-collapse: collapse; }
+.ap-table th { background: #12201a; color: #fff; font-size: .84rem; font-weight: 700; padding: 12px 14px; text-align: right; white-space: nowrap; }
+.ap-table td { padding: 12px 14px; border-bottom: 1px solid #eef2f0; font-size: .89rem; vertical-align: middle; }
+.ap-table tbody tr:hover { background: #f8faf9; }
+.ap-table small { color: #9aaaa3; }
+.ap-table .empty { text-align: center; color: #9aaaa3; padding: 34px; }
+
+.tag { display: inline-block; border-radius: 7px; padding: 3px 9px; font-size: .76rem; font-weight: 700; }
+.t-cus { background: #e8f3ed; color: #006633; }
+.t-drv { background: #fdeef0; color: #D21034; }
+.t-res { background: #fff3e6; color: #e07b00; }
+.t-adm { background: #e9ecf5; color: #3b4a7a; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ccd6d1; margin-right: 5px; }
+.dot.on { background: #00a651; }
+
+.acts { white-space: nowrap; }
+.ic {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 9px; background: #f1f6f3; color: #33443c;
+    margin-left: 4px; text-decoration: none; font-size: .82rem;
+}
+.ic:hover { background: #006633; color: #fff; }
+.ic.danger:hover { background: #D21034; color: #fff; }
+
+.st { border-radius: 7px; padding: 3px 9px; font-size: .74rem; font-weight: 700; background: #eef2f0; color: #46564f; }
+.st-delivered, .st-completed { background: #e8f3ed; color: #006633; }
+.st-pending { background: #fff3e6; color: #e07b00; }
+.st-delivering, .st-picked_up { background: #e6f3fb; color: #0b6ea8; }
+
+.ap-card { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 26px 24px; }
+.ap-card h5 { font-weight: 800; color: #12201a; margin-bottom: 14px; }
+.ap-card label { display: block; font-size: .85rem; color: #55665e; font-weight: 600; margin-bottom: 5px; }
+.ap-card input[type=number] {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 10px; padding: 9px 13px;
+    font-family: inherit; font-size: .95rem; background: #fafcfb;
+}
+.ap-card input[type=number]:focus { outline: none; border-color: #006633; background: #fff; }
+.ap-card .hint { color: #7b8c84; font-size: .87rem; line-height: 1.85; margin-bottom: 14px; }
+.sw { display: flex; align-items: center; gap: 9px; cursor: pointer; }
+.sw input { width: 18px; height: 18px; accent-color: #006633; }
+.sw span { font-weight: 700; color: #12201a; font-size: .93rem; }
+
+.live { background: #f6faf8; }
+.live-row { display: flex; justify-content: space-between; padding: 9px 0; font-size: .92rem; color: #55665e; }
+.live-row b { color: #12201a; font-weight: 800; }
+.live-row b.up { color: #D21034; }
+.live-note {
+    margin-top: 14px; background: #e8f3ed; color: #006633; border-radius: 11px;
+    padding: 11px 14px; font-size: .86rem; font-weight: 600; text-align: center;
+}
+.live-note.up { background: #fdeef0; color: #D21034; }
+
+@media (max-width: 991px) { .ap-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 575px) { .ap-stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}

@@ -107,6 +107,8 @@ class MenuItem(db.Model):
     image_thumbnail = db.Column(db.String(255))  # Add this line
     
     is_available = db.Column(db.Boolean, default=True, index=True)
+    rating = db.Column(db.Float, default=0.0)
+    total_reviews = db.Column(db.Integer, default=0)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -218,4 +220,44 @@ class Wallet(db.Model):
 
     def __repr__(self):
         return f'<Wallet User:{self.user_id} Balance:{self.balance} DZD>'
-    
+
+
+class PricingSetting(db.Model):
+    """إعدادات التسعير — صف واحد يتحكّم فيه المشرف من لوحة الإدارة"""
+    __tablename__ = 'pricing_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # الرسوم الأساسية
+    base_fee       = db.Column(db.Float, default=200.0)   # رسم التوصيل الثابت
+    per_km         = db.Column(db.Float, default=0.0)     # زيادة عن كل كيلومتر
+    platform_fee   = db.Column(db.Float, default=50.0)    # رسم خدمة المنصة
+    commission     = db.Column(db.Float, default=10.0)    # عمولة المنصة على المطعم (٪)
+
+    # حدود رسم التوصيل بعد كل الحسابات
+    min_fee        = db.Column(db.Float, default=150.0)
+    max_fee        = db.Column(db.Float, default=600.0)
+
+    # سياسة العرض والطلب
+    surge_enabled  = db.Column(db.Boolean, default=True)
+    surge_threshold= db.Column(db.Float, default=1.5)   # طلبات لكل سائق متاح
+    surge_step     = db.Column(db.Float, default=0.20)  # نسبة الزيادة عن كل درجة
+    surge_max      = db.Column(db.Float, default=2.0)   # أقصى مضاعف
+
+    # مكافأة السائق عند ندرة السائقين (تُضاف لحصّته من الزيادة)
+    driver_share   = db.Column(db.Float, default=100.0)  # ٪ من الزيادة تذهب للسائق
+
+    updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @staticmethod
+    def get():
+        """يُرجع صف الإعدادات، وينشئه بالقيم الافتراضية إن لم يوجد"""
+        st = PricingSetting.query.get(1)
+        if not st:
+            st = PricingSetting(id=1)
+            db.session.add(st)
+            db.session.commit()
+        return st
+
+    def __repr__(self):
+        return f'<PricingSetting base={self.base_fee} surge={self.surge_enabled}>'

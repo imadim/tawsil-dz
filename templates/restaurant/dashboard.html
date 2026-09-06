@@ -22,6 +22,49 @@
     </div>
 </div>
 
+<!-- شريط الإجراءات -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="rest-actions">
+            <a href="{{ url_for('restaurant_menu_management') }}" class="ra-btn ra-main">
+                <i class="fas fa-list-check"></i>
+                <span><strong>إدارة القائمة</strong><small>أطباقك وأسعارها</small></span>
+            </a>
+            <a href="{{ url_for('add_menu_item') }}" class="ra-btn">
+                <i class="fas fa-plus"></i>
+                <span><strong>إضافة طبق</strong><small>أضف صنفاً جديداً</small></span>
+            </a>
+            <a href="{{ url_for('restaurant_profile', restaurant_id=restaurant.id) }}" class="ra-btn">
+                <i class="fas fa-store"></i>
+                <span><strong>صفحة مطعمي</strong><small>كما يراها الزبون</small></span>
+            </a>
+            <a href="{{ url_for('guide_download', role='restaurant') }}" target="_blank" class="ra-btn">
+                <i class="fas fa-book-open"></i>
+                <span><strong>دليل المطعم</strong><small>شرح مختصر</small></span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.rest-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ra-btn {
+    display: flex; align-items: center; gap: 13px; text-decoration: none;
+    background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 16px 18px;
+    color: #12201a; transition: transform .2s, box-shadow .2s;
+}
+.ra-btn:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,60,30,.12); color: #12201a; }
+.ra-btn i { font-size: 1.3rem; color: #006633; width: 30px; text-align: center; }
+.ra-btn span { display: flex; flex-direction: column; line-height: 1.45; }
+.ra-btn strong { font-size: .97rem; font-weight: 700; }
+.ra-btn small { color: #7b8c84; font-size: .78rem; }
+.ra-main { background: #006633; border-color: #006633; color: #fff; }
+.ra-main:hover { background: #004d26; color: #fff; }
+.ra-main i, .ra-main small { color: rgba(255,255,255,.85); }
+@media (max-width: 991px) { .rest-actions { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 575px) { .rest-actions { grid-template-columns: 1fr; } }
+</style>
+
 <!-- Stats -->
 <div class="row mb-4">
     <div class="col-md-3 mb-3">

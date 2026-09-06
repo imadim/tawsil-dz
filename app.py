@@ -49,6 +49,23 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+def admin_required(f):
+    """يمنع أي وصول لمسارات الإدارة من غير المشرف"""
+    from functools import wraps
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('سجّل الدخول أولاً', 'warning')
+            return redirect(url_for('login'))
+        if current_user.role != 'admin':
+            flash('لا تملك صلاحية الوصول إلى هذه الصفحة', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return wrapper
+
+
+
 
 # ============================================
 # upload images  
@@ -105,7 +122,7 @@ def upload_restaurant_image(restaurant_id):
     else:
         flash('نوع الصورة غير مدعوم – استخدم PNG JPG WEBP', 'danger')
 
-    return redirect(url_for('admin_grand_dashboard'))
+    return redirect(request.referrer or url_for('admin_panel'))
 
 
 
@@ -159,6 +176,79 @@ CUISINES = [
 DEFAULT_CUISINE = "أخرى"
 
 
+# ============================================
+# محرّك التسعير الديناميكي (العرض والطلب)
+# ============================================
+
+def _haversine_km(lat1, lng1, lat2, lng2):
+    """المسافة بالكيلومترات بين نقطتين"""
+    from math import radians, sin, cos, asin, sqrt
+    try:
+        lat1, lng1, lat2, lng2 = map(float, (lat1, lng1, lat2, lng2))
+    except (TypeError, ValueError):
+        return 0.0
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 6371.0 * 2 * asin(min(1.0, sqrt(a)))
+
+
+def demand_state():
+    """حالة السوق الآن: كم طلب ينتظر مقابل كم سائق متاح"""
+    waiting = Order.query.filter(
+        Order.status.in_(['pending', 'confirmed', 'ready'])
+    ).count()
+    drivers = User.query.filter_by(role='driver', is_available=True, is_active=True).count()
+    ratio = waiting / drivers if drivers else (float(waiting) if waiting else 0.0)
+    return {'waiting_orders': waiting, 'available_drivers': drivers, 'ratio': round(ratio, 2)}
+
+
+def surge_multiplier(settings=None, state=None):
+    """مضاعف السعر حسب الضغط: كل درجة فوق العتبة تزيد نسبة ثابتة"""
+    st = settings or PricingSetting.get()
+    if not st.surge_enabled:
+        return 1.0, (state or demand_state())
+    state = state or demand_state()
+    ratio = state['ratio']
+    if ratio <= st.surge_threshold:
+        return 1.0, state
+    import math
+    steps = math.ceil(ratio - st.surge_threshold)
+    mult = 1.0 + (st.surge_step * steps)
+    return round(min(mult, st.surge_max), 2), state
+
+
+def quote_delivery(restaurant=None, dest_lat=None, dest_lng=None):
+    """تسعيرة توصيل كاملة: الرسم، رسم الخدمة، المضاعف، وحصّة السائق"""
+    st = PricingSetting.get()
+
+    km = 0.0
+    if restaurant is not None and dest_lat is not None and dest_lng is not None:
+        km = _haversine_km(restaurant.latitude, restaurant.longitude, dest_lat, dest_lng)
+
+    base = st.base_fee + (st.per_km * km)
+    mult, state = surge_multiplier(st)
+    fee = base * mult
+    fee = max(st.min_fee, min(st.max_fee, fee))
+    fee = round(fee / 10.0) * 10  # تقريب لأقرب 10 د.ج
+
+    extra = max(0.0, fee - st.base_fee)
+    driver_bonus = round(extra * (st.driver_share / 100.0))
+
+    return {
+        'delivery_fee': float(fee),
+        'platform_fee': float(st.platform_fee),
+        'commission': float(st.commission),
+        'distance_km': round(km, 2),
+        'multiplier': mult,
+        'surge': mult > 1.0,
+        'driver_bonus': driver_bonus,
+        'waiting_orders': state['waiting_orders'],
+        'available_drivers': state['available_drivers'],
+        'ratio': state['ratio'],
+    }
+
+
 # أسماء الولايات القديمة باللاتينية → المقابل العربي (توحيد البيانات القديمة)
 LEGACY_WILAYA_MAP = {
     "Alger": "الجزائر", "Oran": "وهران", "Constantine": "قسنطينة", "Annaba": "عنابة",
@@ -187,6 +277,21 @@ def ensure_schema():
             insp = inspect(db.engine)
             if 'restaurants' not in insp.get_table_names():
                 return
+            db.create_all()          # ينشئ جدول pricing_settings إن لم يوجد
+            PricingSetting.get()     # يضمن وجود صف الإعدادات
+            # أعمدة ناقصة في جداول أخرى
+            for table, col, ddl, default in [
+                ('menu_items', 'rating',        'FLOAT',   '0'),
+                ('menu_items', 'total_reviews', 'INTEGER', '0'),
+            ]:
+                if table in insp.get_table_names():
+                    existing = {c['name'] for c in insp.get_columns(table)}
+                    if col not in existing:
+                        with db.engine.begin() as conn:
+                            conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+                            conn.execute(text(f"UPDATE {table} SET {col} = {default} WHERE {col} IS NULL"))
+                        print(f"✅ عمود {col} أُضيف إلى {table}")
+
             cols = {c['name'] for c in insp.get_columns('restaurants')}
             if 'cuisine' not in cols:
                 with db.engine.begin() as conn:
@@ -423,6 +528,7 @@ def format_currency(amount):
 # -------------------------------------------------------------
 
 @app.route("/admin/dashboard")
+@admin_required
 def admin_grand_dashboard():
     # 1. إحصائيات المستخدمين حسب الرتبة
     total_clients = User.query.filter_by(role="customer").count()
@@ -472,31 +578,118 @@ def admin_grand_dashboard():
 # -------------------------------------------------------------
 
 # تجميد أو تفعيل حساب مستخدم (زبون أو سائق)
+@app.route("/admin/panel")
+@admin_required
+def admin_panel():
+    """لوحة إدارة شاملة: الحسابات، المطاعم، الطلبات، والتسعير"""
+    q     = (request.args.get('q') or '').strip()
+    role  = request.args.get('role') or ''
+
+    users_q = User.query
+    if role in ('customer', 'driver', 'restaurant', 'admin'):
+        users_q = users_q.filter_by(role=role)
+    if q:
+        like = f'%{q}%'
+        users_q = users_q.filter(db.or_(
+            User.username.ilike(like), User.email.ilike(like), User.phone.ilike(like)
+        ))
+    users = users_q.order_by(User.created_at.desc()).all()
+
+    restaurants = Restaurant.query.order_by(Restaurant.is_open.desc(), Restaurant.name_ar).all()
+    orders      = Order.query.order_by(Order.created_at.desc()).limit(60).all()
+
+    counts = {
+        'customer':   User.query.filter_by(role='customer').count(),
+        'driver':     User.query.filter_by(role='driver').count(),
+        'restaurant': Restaurant.query.count(),
+        'orders':     Order.query.count(),
+        'suspended':  User.query.filter_by(is_active=False).count(),
+        'drivers_on': User.query.filter_by(role='driver', is_available=True, is_active=True).count(),
+    }
+
+    return render_template('admin/panel.html',
+                           users=users, restaurants=restaurants, orders=orders,
+                           counts=counts, pricing=PricingSetting.get(),
+                           demand=demand_state(), quote=quote_delivery(),
+                           q=q, role=role, cuisines=CUISINES)
+
+
+@app.route("/admin/pricing", methods=['POST'])
+@admin_required
+def admin_save_pricing():
+    """حفظ إعدادات التسعير"""
+    st = PricingSetting.get()
+    f = request.form
+
+    def num(key, current, lo=0.0, hi=1e6):
+        try:
+            return max(lo, min(hi, float(f.get(key, current))))
+        except (TypeError, ValueError):
+            return current
+
+    st.base_fee        = num('base_fee', st.base_fee)
+    st.per_km          = num('per_km', st.per_km)
+    st.platform_fee    = num('platform_fee', st.platform_fee)
+    st.commission      = num('commission', st.commission, 0, 100)
+    st.min_fee         = num('min_fee', st.min_fee)
+    st.max_fee         = num('max_fee', st.max_fee)
+    st.surge_threshold = num('surge_threshold', st.surge_threshold, 0.1)
+    st.surge_step      = num('surge_step', st.surge_step, 0, 2)
+    st.surge_max       = num('surge_max', st.surge_max, 1, 5)
+    st.driver_share    = num('driver_share', st.driver_share, 0, 100)
+    st.surge_enabled   = f.get('surge_enabled') == 'on'
+
+    if st.min_fee > st.max_fee:
+        st.min_fee, st.max_fee = st.max_fee, st.min_fee
+
+    db.session.commit()
+    flash('تم حفظ إعدادات التسعير', 'success')
+    return redirect(url_for('admin_panel') + '#pricing')
+
+
+@app.route("/admin/restaurant/delete/<int:r_id>")
+@admin_required
+def admin_delete_restaurant(r_id):
+    """حذف مطعم مع حساب صاحبه"""
+    rest = Restaurant.query.get_or_404(r_id)
+    name = rest.name_ar
+    owner = User.query.get(rest.user_id)
+    db.session.delete(rest)
+    if owner and owner.role == 'restaurant':
+        db.session.delete(owner)
+    db.session.commit()
+    flash(f'تم حذف مطعم {name}', 'success')
+    return redirect(url_for('admin_panel'))
+
+
 @app.route("/admin/user/toggle/<int:u_id>")
+@admin_required
 def admin_toggle_user(u_id):
     user = User.query.get_or_404(u_id)
     user.is_active = not user.is_active
     db.session.commit()
     flash(f"تم تغيير حالة حساب {user.username} بنجاح!", "success")
-    return redirect(url_for('admin_grand_dashboard'))
+    return redirect(request.referrer or url_for('admin_panel'))
 
 # حذف مستخدم نهائياً من المنصة
 @app.route("/admin/user/delete/<int:u_id>")
+@admin_required
 def admin_delete_user(u_id):
     user = User.query.get_or_404(u_id)
     db.session.delete(user)
     db.session.commit()
     flash("تم حذف المستخدم نهائياً من قاعدة البيانات.", "danger")
-    return redirect(url_for('admin_grand_dashboard'))
+    return redirect(request.referrer or url_for('admin_panel'))
 
 # فتح أو غلق مطعم إدارياً
 @app.route("/admin/restaurant/toggle/<int:r_id>")
+@admin_required
 def admin_toggle_restaurant(r_id):
     restaurant = Restaurant.query.get_or_404(r_id)
     restaurant.is_open = not restaurant.is_open
     db.session.commit()
     flash(f"تم تحديث حالة عمل مطعم {restaurant.name_ar}!", "success")
-    return redirect(url_for('admin_grand_dashboard'))
+    return redirect(request.referrer or url_for('admin_panel'))
 
 
 # ============================================
@@ -520,7 +713,7 @@ def index():
             return redirect(url_for('restaurant_dashboard'))
         elif current_user.role == 'admin':
             #return redirect(url_for('admin_dashboard'))
-            return redirect(url_for('admin_grand_dashboard')) 
+            return redirect(request.referrer or url_for('admin_panel')) 
     # نعرضو الكل — المفتوحة الأولى ثم حسب التقييم — والزبون يفلتر بنفسه
     restaurants = Restaurant.query.order_by(
         Restaurant.is_open.desc(),
@@ -555,7 +748,7 @@ def login():
             elif user.role == 'restaurant':
                 return redirect(url_for('restaurant_dashboard'))
             elif user.role == 'admin':
-                return redirect(url_for('admin_grand_dashboard'))
+                return redirect(request.referrer or url_for('admin_panel'))
         else:
             flash('إيميل أو كلمة السر خاطئة', 'danger')
     
@@ -865,7 +1058,15 @@ def create_order():
         return jsonify({'error': 'لا تملك الصلاحية'}), 403
     
     data = request.json
-    
+
+    # تسعيرة لحظية حسب المسافة وحالة العرض والطلب
+    _rest = Restaurant.query.get(data['restaurant_id'])
+    quote = quote_delivery(
+        _rest,
+        data.get('delivery_lat', 36.7538),
+        data.get('delivery_lng', 3.0588)
+    )
+
     order = Order(
         order_number=f'DZ{datetime.now().strftime("%Y%m%d%H%M%S")}',
         customer_id=current_user.id,
@@ -877,8 +1078,8 @@ def create_order():
         payment_method=data['payment_method'],
         customer_notes=data.get('notes', ''),
         total_amount=0,
-        delivery_fee=200.0,
-        platform_fee=50.0
+        delivery_fee=quote['delivery_fee'],
+        platform_fee=quote['platform_fee']
     )
     
     total = 0
@@ -1217,14 +1418,42 @@ def reject_order(order_id):
 
 
 
+@app.route('/restaurant/menu')
+@login_required
+def restaurant_menu_management():
+    """صفحة إدارة قائمة أطباق المطعم"""
+    if current_user.role != 'restaurant':
+        flash('لا تملك الصلاحية', 'danger')
+        return redirect(url_for('index'))
+
+    restaurant = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not restaurant:
+        flash('أكمل بيانات مطعمك أولاً', 'warning')
+        return redirect(url_for('index'))
+
+    menu_items = MenuItem.query.filter_by(restaurant_id=restaurant.id)\
+                               .order_by(MenuItem.category_ar, MenuItem.name_ar).all()
+
+    return render_template('restaurant/menu_management.html',
+                           restaurant=restaurant,
+                           menu_items=menu_items)
+
+
+@app.route('/restaurant/menu/add', defaults={'restaurant_id': None}, methods=['GET', 'POST'])
 @app.route('/restaurant/menu/add/<int:restaurant_id>', methods=['GET', 'POST'])
 @login_required
 def add_menu_item(restaurant_id):
     if current_user.role != 'restaurant':
         flash('لا تملك الصلاحية', 'danger')
         return redirect(url_for('index'))
-    
-    restaurant = Restaurant.query.get_or_404(restaurant_id)
+
+    if restaurant_id is None:
+        restaurant = Restaurant.query.filter_by(user_id=current_user.id).first()
+        if not restaurant:
+            flash('أكمل بيانات مطعمك أولاً', 'warning')
+            return redirect(url_for('index'))
+    else:
+        restaurant = Restaurant.query.get_or_404(restaurant_id)
     
     if restaurant.user_id != current_user.id:
         flash('لا تملك الصلاحية', 'danger')
@@ -1265,7 +1494,7 @@ def add_menu_item(restaurant_id):
         db.session.commit()
         
         flash(f'تمت إضافة {name_ar} بنجاح!', 'success')
-        return redirect(url_for('restaurant_dashboard'))
+        return redirect(url_for('restaurant_menu_management'))
     
     return render_template('restaurant/add_dish.html', restaurant=restaurant)
 
@@ -1303,9 +1532,9 @@ def edit_menu_item(item_id):
         
         db.session.commit()
         flash('تم التحديث بنجاح!', 'success')
-        return redirect(url_for('restaurant_dashboard'))
+        return redirect(url_for('restaurant_menu_management'))
     
-    return render_template('restaurant/edit_menu_item.html', 
+    return render_template('restaurant/edit_dish.html', 
                          menu_item=menu_item, 
                          restaurant=restaurant)
 
@@ -1696,6 +1925,16 @@ def pwa_manifest():
     response = send_from_directory('static', 'manifest.json')
     response.headers['Content-Type'] = 'application/manifest+json; charset=utf-8'
     return response
+
+
+@app.route('/api/pricing/quote')
+def api_pricing_quote():
+    """تسعيرة لحظية — تستدعيها صفحة السلة قبل تأكيد الطلب"""
+    rid = request.args.get('restaurant_id', type=int)
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    rest = Restaurant.query.get(rid) if rid else None
+    return jsonify(quote_delivery(rest, lat, lng))
 
 
 @app.route('/guide')
