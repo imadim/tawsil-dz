@@ -22,7 +22,7 @@
 ## التشغيل محلياً
 
 ```bash
-git clone https://github.com/<username>/tawsil-dz.git
+git clone https://github.com/imadim/tawsil-dz.git
 cd tawsil-dz
 
 python -m venv venv
