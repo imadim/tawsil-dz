@@ -739,7 +739,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        <a href="/track/{{ o.id }}" target="_blank"
+                                        <a href="{{ url_for('track_order', order_id=o.id) }}" target="_blank"
                                            class="btn btn-primary btn-sm fw-bold text-white">
                                             <i class="fa-solid fa-map-location-dot"></i> تتبع
                                         </a>
@@ -781,7 +781,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <a href="/track/{{ o.id }}" target="_blank"
+                            <a href="{{ url_for('track_order', order_id=o.id) }}" target="_blank"
                                class="btn btn-primary btn-sm fw-bold w-100 text-white">
                                 <i class="fa-solid fa-map-location-dot"></i> تتبع الطلبية
                             </a>

@@ -1987,11 +1987,11 @@ def create_order():
 @login_required
 def track_order(order_id):
     order = Order.query.get_or_404(order_id)
-    
-    # security check
-    if current_user.role == 'customer' and order.customer_id != current_user.id:
-        flash('لا تملك الصلاحية لرؤية الطلبية', 'danger')
-        return redirect(url_for('customer_dashboard'))
+
+    # الصلاحية: الزبون صاحب الطلب، سائقه، مطعمه، أو الأدمن فقط
+    if not user_may_see_order(order):
+        flash('لا تملك الصلاحية لرؤية هذه الطلبية', 'danger')
+        return redirect(url_for('index'))
     
     # ── always build driver_coords to avoid UndefinedError ──
     driver_coords = {
