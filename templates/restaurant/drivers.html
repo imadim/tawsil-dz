@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}سوق السائقين - {{ restaurant.name_ar }}{% endblock %}
+
+{% block content %}
+<div class="dm-head">
+    <div>
+        <h1>سوق عروض التوصيل</h1>
+        <p>السائقون ينشرون أسعارهم، وأنت تقارن وتختار. عند الاتفاق يُطبَّق سعر شريكك على طلباتك.</p>
+    </div>
+    <div class="dm-count"><b>{{ partners_count }}</b><span>شريك</span></div>
+</div>
+
+<form class="dm-bar" method="get">
+    <div class="dm-field">
+        <label>ترتيب حسب</label>
+        <select name="sort" onchange="this.form.submit()">
+            <option value="price"  {% if sort=='price'  %}selected{% endif %}>الأرخص سعراً</option>
+            <option value="rating" {% if sort=='rating' %}selected{% endif %}>الأعلى تقييماً</option>
+            <option value="trips"  {% if sort=='trips'  %}selected{% endif %}>الأكثر توصيلات</option>
+        </select>
+    </div>
+    <div class="dm-field">
+        <label>الولاية</label>
+        <select name="wilaya" onchange="this.form.submit()">
+            <option value="">كل الولايات</option>
+            {% for code, name in WILAYAS %}
+            <option value="{{ name }}" {% if wilaya == name %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="dm-field">
+        <label>احسب السعر لمسافة (كم)</label>
+        <input type="number" name="km" value="{{ ref_km|int }}" min="1" max="60" step="1" onchange="this.form.submit()">
+    </div>
+</form>
+
+{% if rows %}
+<div class="dm-grid">
+    {% for r in rows %}
+    <article class="dcard {{ 'partner' if r.is_partner }}" id="d-{{ r.driver.id }}">
+        {% if r.is_partner %}<span class="dc-flag">شريك</span>{% endif %}
+
+        <div class="dc-top">
+            <div class="dc-av">
+                {% if r.driver.photo_url %}<img src="{{ r.driver.photo_url }}" alt="">
+                {% else %}<span>{{ r.driver.username[0] if r.driver.username else '?' }}</span>{% endif %}
+            </div>
+            <div class="dc-id">
+                <b>{{ r.driver.username }}</b>
+                <div class="dc-meta">
+                    {% if r.driver.total_reviews %}
+                    <span class="dc-rate">★ {{ r.driver.rating }}</span>
+                    <small>({{ r.driver.total_reviews }})</small>
+                    {% else %}
+                    <span class="dc-new">سائق جديد</span>
+                    {% endif %}
+                    <small>· {{ r.deliveries }} توصيلة</small>
+                </div>
+            </div>
+            <div class="dc-price">
+                <b>{{ r.price|round|int }}</b><span>د.ج / {{ ref_km|int }} كم</span>
+            </div>
+        </div>
+
+        {% if r.driver.vehicle_photo_url %}
+        <img class="dc-vehicle" src="{{ r.driver.vehicle_photo_url }}" alt="مركبة {{ r.driver.username }}">
+        {% endif %}
+
+        <div class="dc-rows">
+            <div><i class="fas fa-motorcycle"></i>
+                {{ r.driver.vehicle_type or 'مركبة' }}{% if r.driver.vehicle_model %} · {{ r.driver.vehicle_model }}{% endif %}
+                {% if r.driver.vehicle_color %} · {{ r.driver.vehicle_color }}{% endif %}
+            </div>
+            {% if r.driver.vehicle_plate %}
+            <div><i class="fas fa-hashtag"></i> <span dir="ltr">{{ r.driver.vehicle_plate }}</span></div>
+            {% endif %}
+            <div><i class="fas fa-location-dot"></i>
+                {{ r.offer.wilaya or '—' }}{% if r.offer.communes %} · {{ r.offer.communes }}{% endif %}
+            </div>
+            <div><i class="fas fa-calculator"></i>
+                {{ r.offer.base_fee|int }} د.ج + {{ r.offer.per_km|int }} د.ج/كم
+                <small>(حتى {{ r.offer.max_km|int }} كم)</small>
+            </div>
+            {% if r.offer.note %}
+            <div class="dc-note"><i class="fas fa-quote-right"></i> {{ r.offer.note }}</div>
+            {% endif %}
+        </div>
+
+        <button type="button" class="dc-btn {{ 'off' if r.is_partner }}"
+                onclick="togglePartner({{ r.driver.id }})">
+            {% if r.is_partner %}<i class="fas fa-xmark"></i> إنهاء الاتفاق
+            {% else %}<i class="fas fa-handshake"></i> اتفق مع هذا السائق{% endif %}
+        </button>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="dm-empty">
+    <i class="fas fa-user-clock"></i>
+    <b>لا توجد عروض مطابقة</b>
+    <p>لم ينشر أي سائق عرضاً في هذا النطاق بعد. جرّب ولاية أخرى أو أزِل الفلتر.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+function togglePartner(driverId) {
+    const card = document.getElementById('d-' + driverId);
+    const btn = card.querySelector('.dc-btn');
+    btn.disabled = true;
+    fetch(`/restaurant/partner/${driverId}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { alert(d.error || 'تعذّر التنفيذ'); return; }
+            card.classList.toggle('partner', d.partner);
+            btn.classList.toggle('off', d.partner);
+            btn.innerHTML = d.partner
+                ? '<i class="fas fa-xmark"></i> إنهاء الاتفاق'
+                : '<i class="fas fa-handshake"></i> اتفق مع هذا السائق';
+            let flag = card.querySelector('.dc-flag');
+            if (d.partner && !flag) {
+                flag = document.createElement('span');
+                flag.className = 'dc-flag'; flag.textContent = 'شريك';
+                card.prepend(flag);
+            } else if (!d.partner && flag) { flag.remove(); }
+            if (typeof showToast === 'function') showToast('السوق', d.message);
+        })
+        .catch(() => alert('تعذّر الاتصال بالخادم'))
+        .finally(() => { btn.disabled = false; });
+}
+</script>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.dm-head {
+    background: linear-gradient(135deg, #006633 0%, #00913f 100%); color: #fff;
+    border-radius: 20px; padding: 26px 30px; margin-bottom: 18px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.dm-head h1 { font-weight: 800; font-size: 1.55rem; margin: 0 0 5px; }
+.dm-head p { margin: 0; color: rgba(255,255,255,.82); font-size: .9rem; max-width: 60ch; }
+.dm-count { text-align: center; }
+.dm-count b { display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.1; }
+.dm-count span { font-size: .78rem; color: rgba(255,255,255,.75); }
+
+.dm-bar { display: flex; gap: 14px; flex-wrap: wrap; background: #fff; border: 1px solid #e6ede9;
+          border-radius: 15px; padding: 14px 16px; margin-bottom: 20px; }
+.dm-field { flex: 1 1 170px; }
+.dm-field label { display: block; font-size: .78rem; color: #7b8c84; font-weight: 600; margin-bottom: 5px; }
+.dm-field select, .dm-field input {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 10px; padding: 8px 12px;
+    font-family: inherit; font-size: .9rem; background: #fafcfb;
+}
+
+.dm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+.dcard { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 20px;
+         position: relative; display: flex; flex-direction: column; }
+.dcard.partner { border-color: #00913f; box-shadow: 0 8px 24px rgba(0,120,60,.10); }
+.dc-flag { position: absolute; top: -9px; inset-inline-start: 20px; background: #00913f; color: #fff;
+           border-radius: 7px; padding: 2px 11px; font-size: .74rem; font-weight: 700; }
+
+.dc-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.dc-av { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+         background: #e8f3ed; color: #006633; display: flex; align-items: center; justify-content: center;
+         font-weight: 800; font-size: 1.25rem; }
+.dc-av img { width: 100%; height: 100%; object-fit: cover; }
+.dc-id { flex: 1; min-width: 0; }
+.dc-id b { display: block; font-size: 1rem; color: #12201a; font-weight: 700; }
+.dc-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.dc-rate { color: #b8860b; font-weight: 700; font-size: .85rem; }
+.dc-new { color: #7b8c84; font-size: .78rem; background: #f1f5f3; border-radius: 6px; padding: 1px 7px; }
+.dc-meta small { color: #9aaaa3; font-size: .76rem; }
+.dc-price { text-align: center; flex-shrink: 0; }
+.dc-price b { display: block; font-size: 1.35rem; font-weight: 800; color: #006633; line-height: 1.1; }
+.dc-price span { font-size: .7rem; color: #9aaaa3; }
+
+.dc-vehicle { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; margin-bottom: 13px; }
+.dc-rows { display: grid; gap: 7px; margin-bottom: 16px; }
+.dc-rows div { font-size: .85rem; color: #55665e; }
+.dc-rows i { color: #4fae7a; width: 17px; }
+.dc-rows small { color: #9aaaa3; font-size: .76rem; }
+.dc-note { background: #f6faf8; border-radius: 9px; padding: 7px 11px; color: #46564f; font-size: .82rem; }
+
+.dc-btn { margin-top: auto; width: 100%; background: #006633; color: #fff; border: 0;
+          border-radius: 11px; padding: 11px; font-family: inherit; font-weight: 700; cursor: pointer; }
+.dc-btn:hover { background: #004d26; }
+.dc-btn.off { background: #fff; color: #b3121b; border: 1px solid #f0ccd0; }
+.dc-btn.off:hover { background: #b3121b; color: #fff; }
+
+.dm-empty { background: #fff; border: 1px dashed #d5e2db; border-radius: 18px; padding: 50px 24px; text-align: center; }
+.dm-empty i { font-size: 2.3rem; color: #c3d3ca; display: block; margin-bottom: 14px; }
+.dm-empty b { display: block; color: #33443c; margin-bottom: 6px; }
+.dm-empty p { color: #7b8c84; margin: 0; font-size: .9rem; }
+</style>
+{% endblock %}

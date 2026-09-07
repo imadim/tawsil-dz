@@ -234,16 +234,13 @@
                         </label>
                         <select class="form-select" id="paymentMethod" required>
                             <option value="cash">💵 نقداً عند الاستلام</option>
-                            <!-- الدفع بالبطاقة معطّل حتى يكتمل التكامل مع بوابة SATIM/CIB.
-                                 لا تُفعّله قبل ذلك: الطلب يُسجَّل دون أن يُخصم أي مبلغ فعلياً.
-                            <option value="cib_card">💳 بطاقة CIB</option>
-                            <option value="edahabia">💳 الذهبية Edahabia</option>
-                            -->
+                            <option value="baridimob">📱 بريدي موب</option>
+                            <option value="visa">💳 بطاقة بنكية (الذهبية · CIB · Visa)</option>
                         </select>
                     </div>
-                    <p class="text-muted small mb-3">
+                    <p class="text-muted small mb-3" id="payHint">
                         <i class="fas fa-circle-info"></i>
-                        الدفع بالبطاقة قيد التفعيل — حالياً الدفع نقداً عند استلام الطلب.
+                        <span id="payHintText">تدفع للسائق عند تسليم الطلب.</span>
                     </p>
                     <div id="cardPaymentFields" style="display:none;">
                         <div class="card border-primary mb-3">
@@ -405,11 +402,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    document.getElementById('paymentMethod').addEventListener('change', function() {
-        document.getElementById('cardPaymentFields').style.display     = 'none';
-        document.getElementById('edahabiaPaymentFields').style.display = 'none';
-        if (this.value === 'cib_card')   document.getElementById('cardPaymentFields').style.display     = 'block';
-        if (this.value === 'edahabia')   document.getElementById('edahabiaPaymentFields').style.display = 'block';
+    const PAY_HINTS = {
+        cash:      'تدفع للسائق عند تسليم الطلب.',
+        baridimob: 'بعد تأكيد الطلب تنتقل إلى صفحة الدفع لإتمام التحويل عبر بريدي موب.',
+        visa:      'بعد تأكيد الطلب تنتقل إلى صفحة الدفع الآمنة — بيانات بطاقتك لا تمرّ عبر خوادمنا.'
+    };
+    document.getElementById('paymentMethod').addEventListener('change', function () {
+        const cf = document.getElementById('cardPaymentFields');
+        const ef = document.getElementById('edahabiaPaymentFields');
+        if (cf) cf.style.display = 'none';
+        if (ef) ef.style.display = 'none';
+        const hint = document.getElementById('payHintText');
+        if (hint) hint.textContent = PAY_HINTS[this.value] || '';
     });
     
     const cardNumberInput = document.getElementById('cardNumber');
@@ -536,14 +540,11 @@ function submitOrder() {
     const paymentMethod = document.getElementById('paymentMethod').value;
     const notes         = document.getElementById('orderNotes').value.trim();
     
-    if (!address)                      { alert('⚠️ كتب العنوان'); return; }
+    if (!address)                      { alert('⚠️ اكتب عنوان التوصيل'); return; }
     if (Object.keys(cart).length === 0){ alert('⚠️ السلة فارغة'); return; }
     
+    // الدفع الإلكتروني يتم في صفحة الدفع بعد إنشاء الطلب
     let cardDetails = null;
-    if (paymentMethod === 'cib_card' || paymentMethod === 'edahabia') {
-        cardDetails = validateCardDetails(paymentMethod);
-        if (!cardDetails) return;
-    }
     
     const submitBtn = document.getElementById('submitOrderBtn');
     submitBtn.disabled = true;
@@ -573,13 +574,18 @@ function submitOrder() {
             if (data.verification_code) message += `\n🔐 الكود: ${data.verification_code}`;
             if (data.transaction_id)    message += `\n💳 رقم العملية: ${data.transaction_id}`;
             alert(message);
-            window.location.href = `/order/${data.order_id}/track`;
+            // الدفع الإلكتروني يتم في صفحة الدفع، والنقدي ينتقل مباشرة للتتبّع
+            if (paymentMethod === 'baridimob' || paymentMethod === 'visa') {
+                window.location.href = `/order/${data.order_id}/pay`;
+            } else {
+                window.location.href = `/order/${data.order_id}/track`;
+            }
         } else {
-            throw new Error(data.error || 'غلط في الطلب');
+            throw new Error(data.error || 'تعذّر إنشاء الطلب');
         }
     })
     .catch(error => {
-        alert('❌ صرا غلط: ' + error.message);
+        alert('❌ حدث خطأ: ' + error.message);
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-check"></i> تأكيد الطلب';
     });

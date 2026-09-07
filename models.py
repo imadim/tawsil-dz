@@ -32,6 +32,13 @@ class User(UserMixin, db.Model):
     current_lat = db.Column(db.Float)
     current_lng = db.Column(db.Float)
     vehicle_info = db.Column(db.String(200))
+    photo_url = db.Column(db.String(255))
+    vehicle_photo_url = db.Column(db.String(255))
+    vehicle_type = db.Column(db.String(30))      # دراجة نارية / سيارة / دراجة هوائية
+    vehicle_model = db.Column(db.String(60))
+    vehicle_plate = db.Column(db.String(30))
+    vehicle_color = db.Column(db.String(30))
+    google_id = db.Column(db.String(64), unique=True, index=True)
     license_number = db.Column(db.String(50))
     
     # Restaurant specific
@@ -293,3 +300,85 @@ class Review(db.Model):
 
     def __repr__(self):
         return f'<Review {self.target_type}#{self.target_id} {self.stars}★>'
+
+
+class DriverOffer(db.Model):
+    """عرض خدمة يَنشره السائق — المطاعم تتصفّحه وتختار (نمط P2P)"""
+    __tablename__ = 'driver_offers'
+
+    id        = db.Column(db.Integer, primary_key=True)
+    driver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+
+    base_fee  = db.Column(db.Float, default=180.0)    # الرسم الأساسي للتوصيلة
+    per_km    = db.Column(db.Float, default=15.0)     # زيادة لكل كيلومتر
+    min_fee   = db.Column(db.Float, default=150.0)    # لا يقلّ عنه
+    max_km    = db.Column(db.Float, default=15.0)     # أقصى مسافة يقبلها
+
+    wilaya    = db.Column(db.String(50), index=True)
+    communes  = db.Column(db.String(300))             # بلديات يغطّيها، مفصولة بفواصل
+    note      = db.Column(db.String(300))             # ملاحظة يكتبها السائق
+
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    created_at= db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at= db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    driver = db.relationship('User', backref=db.backref('offer', uselist=False))
+
+    def quote(self, km=0.0):
+        """سعر هذا العرض لمسافة معيّنة"""
+        try:
+            km = float(km or 0)
+        except (TypeError, ValueError):
+            km = 0.0
+        return max(self.min_fee or 0, (self.base_fee or 0) + (self.per_km or 0) * km)
+
+    def __repr__(self):
+        return f'<DriverOffer driver={self.driver_id} {self.base_fee}+{self.per_km}/km>'
+
+
+class Partnership(db.Model):
+    """اتفاق بين مطعم وسائق على عرضه — السعر المتفق عليه محفوظ لحظة الاتفاق"""
+    __tablename__ = 'partnerships'
+
+    id            = db.Column(db.Integer, primary_key=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'), nullable=False, index=True)
+    driver_id     = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    agreed_base   = db.Column(db.Float)
+    agreed_per_km = db.Column(db.Float)
+    is_active     = db.Column(db.Boolean, default=True, index=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    restaurant = db.relationship('Restaurant', backref=db.backref('partnerships', lazy='dynamic'))
+    driver     = db.relationship('User', backref=db.backref('partnerships', lazy='dynamic'))
+
+    __table_args__ = (
+        db.UniqueConstraint('restaurant_id', 'driver_id', name='uq_partner'),
+    )
+
+    def quote(self, km=0.0):
+        try:
+            km = float(km or 0)
+        except (TypeError, ValueError):
+            km = 0.0
+        return (self.agreed_base or 0) + (self.agreed_per_km or 0) * km
+
+
+class Payment(db.Model):
+    """محاولة دفع إلكتروني — بريدي موب أو بطاقة"""
+    __tablename__ = 'payments'
+
+    id         = db.Column(db.Integer, primary_key=True)
+    order_id   = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, index=True)
+    method     = db.Column(db.String(20), nullable=False)   # baridimob | visa | cash
+    amount     = db.Column(db.Float, nullable=False)
+    status     = db.Column(db.String(20), default='pending', index=True)  # pending|paid|failed
+    reference  = db.Column(db.String(60), index=True)
+    is_sandbox = db.Column(db.Boolean, default=True)
+    payer_note = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    order = db.relationship('Order', backref=db.backref('payments', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<Payment {self.method} {self.amount} {self.status}>'

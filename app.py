@@ -201,6 +201,21 @@ CUISINES = [
 
 DEFAULT_CUISINE = "أخرى"
 
+# ── تسجيل الدخول بحساب جوجل (يظهر الزر فقط عند ضبط المفاتيح) ──
+GOOGLE_CLIENT_ID     = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_ENABLED       = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+# ── الدفع الإلكتروني ──
+# الوضع التجريبي هو الافتراضي: يحاكي البوابة ويوسم كل عملية بأنها تجريبية.
+# لتفعيل الدفع الحقيقي: PAYMENTS_SANDBOX=0 مع مفاتيح التاجر من SATIM/بريد الجزائر.
+PAYMENTS_SANDBOX = os.environ.get('PAYMENTS_SANDBOX', '1') != '0'
+PAYMENT_METHODS = {
+    'cash':       {'label': 'نقداً عند الاستلام', 'icon': 'fa-money-bill-wave', 'online': False},
+    'baridimob':  {'label': 'بريدي موب',          'icon': 'fa-mobile-screen',   'online': True},
+    'visa':       {'label': 'بطاقة بنكية',        'icon': 'fa-credit-card',     'online': True},
+}
+
 # أسماء الحالات بالعربية — مصدر واحد لكل الواجهات
 STATUS_AR = {
     'pending':    'بانتظار المطعم',
@@ -327,6 +342,13 @@ def ensure_schema():
                 ('users',      'rating',        'FLOAT',        '0'),
                 ('users',      'total_reviews', 'INTEGER',      '0'),
                 ('users',      'default_address', 'VARCHAR(300)', 'NULL'),
+                ('users',      'photo_url',         'VARCHAR(255)', 'NULL'),
+                ('users',      'vehicle_photo_url', 'VARCHAR(255)', 'NULL'),
+                ('users',      'vehicle_type',      'VARCHAR(30)',  'NULL'),
+                ('users',      'vehicle_model',     'VARCHAR(60)',  'NULL'),
+                ('users',      'vehicle_plate',     'VARCHAR(30)',  'NULL'),
+                ('users',      'vehicle_color',     'VARCHAR(30)',  'NULL'),
+                ('users',      'google_id',         'VARCHAR(64)',  'NULL'),
                 ('restaurants','total_reviews', 'INTEGER',      '0'),
             ]:
                 if table in insp.get_table_names():
@@ -764,7 +786,8 @@ def admin_toggle_restaurant(r_id):
 def inject_lists():
     """الولايات والتصنيفات متاحة في كل القوالب"""
     return dict(WILAYAS=WILAYAS, WILAYA_NAMES=WILAYA_NAMES, CUISINES=CUISINES,
-                STATUS_AR=STATUS_AR)
+                STATUS_AR=STATUS_AR, GOOGLE_ENABLED=GOOGLE_ENABLED,
+                PAYMENT_METHODS=PAYMENT_METHODS, PAYMENTS_SANDBOX=PAYMENTS_SANDBOX)
 
 
 @app.route('/')
@@ -808,7 +831,7 @@ def login():
                 flash('حسابك معطل. راسل المدير', 'danger')
                 return redirect(url_for('login'))
             
-            login_user(user, remember=True)
+            login_user(user, remember=bool(request.form.get('remember')))
             flash(f'مرحبا، {user.username}!', 'success')
             
             if user.role == 'customer':
@@ -1106,6 +1129,106 @@ def restaurant_profile(restaurant_id):
 # CUSTOMER ROUTES
 # ============================================
 
+# ════════════════════════════════════════════
+# تسجيل الدخول بحساب جوجل
+# ════════════════════════════════════════════
+
+_oauth = None
+
+
+def google_client():
+    """يهيّئ عميل OAuth عند أول استعمال — ولا يُحمَّل إن لم تُضبط المفاتيح"""
+    global _oauth
+    if not GOOGLE_ENABLED:
+        return None
+    if _oauth is None:
+        try:
+            from authlib.integrations.flask_client import OAuth
+            _oauth = OAuth(app)
+            _oauth.register(
+                name='google',
+                client_id=GOOGLE_CLIENT_ID,
+                client_secret=GOOGLE_CLIENT_SECRET,
+                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+                client_kwargs={'scope': 'openid email profile'},
+            )
+        except Exception as e:
+            print(f'⚠️  تعذّر تهيئة OAuth: {e}')
+            return None
+    return _oauth.google
+
+
+@app.route('/login/google')
+def login_google():
+    """يبدأ تدفّق الدخول بجوجل"""
+    client = google_client()
+    if not client:
+        flash('الدخول بحساب جوجل غير مفعّل على هذا الخادم', 'warning')
+        return redirect(url_for('login'))
+    session['oauth_role'] = request.args.get('role', 'customer')
+    return client.authorize_redirect(url_for('callback_google', _external=True))
+
+
+@app.route('/login/google/callback')
+def callback_google():
+    """يستقبل جوجل بعد الموافقة، ويُنشئ الحساب أو يربطه"""
+    client = google_client()
+    if not client:
+        return redirect(url_for('login'))
+    try:
+        token = client.authorize_access_token()
+        info = token.get('userinfo') or client.userinfo()
+    except Exception as e:
+        flash(f'تعذّر إتمام الدخول بجوجل: {e}', 'danger')
+        return redirect(url_for('login'))
+
+    email = (info.get('email') or '').strip().lower()
+    if not email:
+        flash('لم يشارك جوجل بريدك الإلكتروني', 'danger')
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(google_id=info.get('sub')).first() \
+        or User.query.filter_by(email=email).first()
+
+    if not user:
+        role = session.pop('oauth_role', 'customer')
+        if role not in ('customer', 'driver'):
+            role = 'customer'          # المطاعم تُسجَّل بنموذجها الخاص
+        base = (info.get('name') or email.split('@')[0]).strip()[:60]
+        username = base
+        n = 1
+        while User.query.filter_by(username=username).first():
+            n += 1
+            username = f'{base} {n}'
+        user = User(username=username, email=email, phone='', role=role, is_active=True)
+        user.set_password(secrets_token())
+        db.session.add(user)
+
+    user.google_id = info.get('sub') or user.google_id
+    if info.get('picture') and not user.photo_url:
+        user.photo_url = info['picture']
+    db.session.commit()
+
+    if not user.is_active:
+        flash('حسابك موقوف. راسل الإدارة', 'danger')
+        return redirect(url_for('login'))
+
+    login_user(user, remember=True)
+    flash(f'مرحباً {user.username}', 'success')
+
+    if not user.phone:
+        flash('أضف رقم هاتفك لتتمكّن من الطلب', 'warning')
+        return redirect(url_for('account'))
+
+    return redirect(url_for({'driver': 'driver_dashboard',
+                             'restaurant': 'restaurant_dashboard'}.get(user.role, 'customer_dashboard')))
+
+
+def secrets_token():
+    import secrets
+    return secrets.token_urlsafe(24)
+
+
 @app.route('/restaurant/<int:restaurant_id>/reviews')
 def restaurant_reviews(restaurant_id):
     """كل تقييمات مطعم — يفتحها الزبون ليقرّر قبل الطلب"""
@@ -1179,6 +1302,68 @@ def refresh_rating(target_type, target_id):
             obj.total_reviews = n
         db.session.commit()
     return avg, n
+
+
+# ════════════════════════════════════════════
+# الدفع الإلكتروني — بريدي موب وبطاقة
+# ════════════════════════════════════════════
+
+def payment_reference():
+    import secrets
+    return 'PAY' + datetime.now().strftime('%y%m%d') + secrets.token_hex(3).upper()
+
+
+@app.route('/order/<int:order_id>/pay', methods=['GET', 'POST'])
+@login_required
+def pay_order(order_id):
+    """شاشة الدفع — تعمل في وضع تجريبي حتى وصل بوابة حقيقية"""
+    order = Order.query.get_or_404(order_id)
+    if order.customer_id != current_user.id:
+        flash('لا تملك صلاحية دفع هذا الطلب', 'danger')
+        return redirect(url_for('my_orders'))
+
+    if order.payment_status == 'completed':
+        flash('هذا الطلب مدفوع بالفعل', 'info')
+        return redirect(url_for('my_orders'))
+
+    if order.status == 'cancelled':
+        flash('الطلب ملغى', 'warning')
+        return redirect(url_for('my_orders'))
+
+    if request.method == 'POST':
+        method = request.form.get('method', 'baridimob')
+        if method not in PAYMENT_METHODS or not PAYMENT_METHODS[method]['online']:
+            flash('طريقة دفع غير معروفة', 'danger')
+            return redirect(url_for('pay_order', order_id=order.id))
+
+        ref = payment_reference()
+        pay = Payment(order_id=order.id, method=method, amount=order.final_amount or 0,
+                      reference=ref, is_sandbox=PAYMENTS_SANDBOX,
+                      payer_note=(request.form.get('note') or '')[:200])
+
+        if PAYMENTS_SANDBOX:
+            # محاكاة: كل عملية تنجح ما لم يختر المستخدم اختبار الفشل
+            if request.form.get('simulate') == 'fail':
+                pay.status = 'failed'
+                db.session.add(pay); db.session.commit()
+                flash('فشلت العملية (محاكاة) — جرّب مرة أخرى', 'danger')
+                return redirect(url_for('pay_order', order_id=order.id))
+            pay.status = 'paid'
+            order.payment_status = 'completed'
+            order.payment_method = method
+            db.session.add(pay); db.session.commit()
+            create_notification(order.customer_id, '💳 تم الدفع',
+                                f'دُفع الطلب {order.order_number} — المرجع {ref}', order.id)
+            flash(f'تم الدفع بنجاح (وضع تجريبي) — المرجع {ref}', 'success')
+            return redirect(url_for('my_orders'))
+
+        # الوضع الحقيقي: هنا يُستدعى SATIM/بريد الجزائر بمفاتيح التاجر
+        pay.status = 'pending'
+        db.session.add(pay); db.session.commit()
+        flash('البوابة الحقيقية غير موصولة بعد على هذا الخادم', 'warning')
+        return redirect(url_for('my_orders'))
+
+    return render_template('customer/pay.html', order=order)
 
 
 @app.route('/order/<int:order_id>/review', methods=['GET', 'POST'])
@@ -1272,6 +1457,164 @@ def restaurant_orders():
                                'delivered': Order.query.filter_by(restaurant_id=rest.id, status='delivered').count(),
                                'cancelled': Order.query.filter_by(restaurant_id=rest.id, status='cancelled').count(),
                            })
+
+
+# ════════════════════════════════════════════
+# ملف السائق وعرض خدمته
+# ════════════════════════════════════════════
+
+VEHICLE_TYPES = ['دراجة نارية', 'سيارة', 'دراجة هوائية', 'شاحنة صغيرة']
+
+
+@app.route('/driver/profile', methods=['GET', 'POST'])
+@login_required
+def driver_profile():
+    """صورة السائق ومركبته ومعلوماتها، وعرض الخدمة الذي تراه المطاعم"""
+    if current_user.role != 'driver':
+        return redirect(url_for('index'))
+
+    offer = DriverOffer.query.filter_by(driver_id=current_user.id).first()
+
+    if request.method == 'POST':
+        from services import save_image
+        section = request.form.get('section', 'vehicle')
+
+        if section == 'vehicle':
+            current_user.vehicle_type  = (request.form.get('vehicle_type') or '').strip()[:30]
+            current_user.vehicle_model = (request.form.get('vehicle_model') or '').strip()[:60]
+            current_user.vehicle_plate = (request.form.get('vehicle_plate') or '').strip()[:30]
+            current_user.vehicle_color = (request.form.get('vehicle_color') or '').strip()[:30]
+            current_user.vehicle_info  = ' · '.join(
+                [x for x in [current_user.vehicle_type, current_user.vehicle_model,
+                             current_user.vehicle_color] if x]) or current_user.vehicle_info
+
+            for field, attr, folder in [('photo', 'photo_url', 'drivers'),
+                                        ('vehicle_photo', 'vehicle_photo_url', 'vehicles')]:
+                f = request.files.get(field)
+                if f and f.filename:
+                    try:
+                        imgs = save_image(f, folder)
+                        if imgs:
+                            setattr(current_user, attr, imgs.get('original') or imgs.get('thumbnail'))
+                    except Exception as e:
+                        flash(f'تعذّر حفظ الصورة: {e}', 'warning')
+            db.session.commit()
+            flash('حُفظت بيانات مركبتك', 'success')
+
+        elif section == 'offer':
+            def num(k, d, lo=0.0, hi=100000.0):
+                try:
+                    return max(lo, min(hi, float(request.form.get(k, d))))
+                except (TypeError, ValueError):
+                    return d
+            if not offer:
+                offer = DriverOffer(driver_id=current_user.id)
+                db.session.add(offer)
+            offer.base_fee  = num('base_fee', 180.0)
+            offer.per_km    = num('per_km', 15.0)
+            offer.min_fee   = num('min_fee', 150.0)
+            offer.max_km    = num('max_km', 15.0, 1, 200)
+            offer.wilaya    = (request.form.get('wilaya') or current_user.wilaya or '').strip()
+            offer.communes  = (request.form.get('communes') or '').strip()[:300]
+            offer.note      = (request.form.get('note') or '').strip()[:300]
+            offer.is_active = request.form.get('is_active') == 'on'
+            db.session.commit()
+            flash('نُشر عرضك — المطاعم تراه الآن', 'success')
+
+        return redirect(url_for('driver_profile'))
+
+    partners = Partnership.query.filter_by(driver_id=current_user.id, is_active=True).all()
+    return render_template('driver/profile.html', offer=offer,
+                           vehicle_types=VEHICLE_TYPES, partners=partners)
+
+
+# ════════════════════════════════════════════
+# سوق عروض التوصيل — المطعم يختار سائقه
+# ════════════════════════════════════════════
+
+@app.route('/restaurant/drivers')
+@login_required
+def driver_market():
+    """المطعم يتصفّح عروض السائقين ويقارن الأسعار والتقييمات"""
+    if current_user.role != 'restaurant':
+        return redirect(url_for('index'))
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest:
+        flash('أكمل بيانات مطعمك أولاً', 'warning')
+        return redirect(url_for('index'))
+
+    sort   = request.args.get('sort', 'price')
+    wilaya = request.args.get('wilaya', '')
+    ref_km = request.args.get('km', 5, type=float) or 5.0
+
+    q = DriverOffer.query.filter_by(is_active=True).join(User, DriverOffer.driver_id == User.id)\
+                         .filter(User.is_active.is_(True))
+    if wilaya:
+        q = q.filter(DriverOffer.wilaya == wilaya)
+    offers = q.all()
+
+    partner_ids = {p.driver_id for p in rest.partnerships.filter_by(is_active=True).all()}
+
+    rows = []
+    for o in offers:
+        d = o.driver
+        if not d:
+            continue
+        done = Order.query.filter_by(driver_id=d.id, status='delivered').count()
+        rows.append({
+            'offer': o, 'driver': d,
+            'price': o.quote(ref_km),
+            'deliveries': done,
+            'is_partner': d.id in partner_ids,
+        })
+
+    if sort == 'rating':
+        rows.sort(key=lambda r: (-(r['driver'].rating or 0), r['price']))
+    elif sort == 'trips':
+        rows.sort(key=lambda r: (-r['deliveries'], r['price']))
+    else:
+        rows.sort(key=lambda r: (r['price'], -(r['driver'].rating or 0)))
+
+    return render_template('restaurant/drivers.html',
+                           restaurant=rest, rows=rows, sort=sort,
+                           wilaya=wilaya, ref_km=ref_km,
+                           partners_count=len(partner_ids))
+
+
+@app.route('/restaurant/partner/<int:driver_id>', methods=['POST'])
+@login_required
+def toggle_partner(driver_id):
+    """المطعم يتعاقد مع سائق على عرضه أو ينهي الاتفاق"""
+    if current_user.role != 'restaurant':
+        return jsonify({'error': 'لا تملك الصلاحية'}), 403
+    rest = Restaurant.query.filter_by(user_id=current_user.id).first()
+    if not rest:
+        return jsonify({'error': 'لا يوجد مطعم'}), 404
+
+    offer = DriverOffer.query.filter_by(driver_id=driver_id, is_active=True).first()
+    if not offer:
+        return jsonify({'error': 'هذا السائق لا يملك عرضاً نشطاً'}), 404
+
+    pt = Partnership.query.filter_by(restaurant_id=rest.id, driver_id=driver_id).first()
+    if pt and pt.is_active:
+        pt.is_active = False
+        db.session.commit()
+        return jsonify({'success': True, 'partner': False, 'message': 'أُنهي الاتفاق'})
+
+    if pt:
+        pt.is_active = True
+        pt.agreed_base = offer.base_fee
+        pt.agreed_per_km = offer.per_km
+    else:
+        pt = Partnership(restaurant_id=rest.id, driver_id=driver_id,
+                         agreed_base=offer.base_fee, agreed_per_km=offer.per_km)
+        db.session.add(pt)
+    db.session.commit()
+
+    create_notification(driver_id, '🤝 اتفاق جديد',
+                        f'تعاقد معك مطعم {rest.name_ar} على عرضك', None)
+    return jsonify({'success': True, 'partner': True,
+                    'message': f'تم الاتفاق مع {offer.driver.username}'})
 
 
 @app.route('/restaurant/toggle-open', methods=['POST'])
@@ -1463,6 +1806,15 @@ def create_order():
         data.get('delivery_lat', 36.7538),
         data.get('delivery_lng', 3.0588)
     )
+
+    # إن كان للمطعم شركاء سائقون، نأخذ أرخص عرض متفق عليه للمسافة نفسها
+    if _rest:
+        deals = Partnership.query.filter_by(restaurant_id=_rest.id, is_active=True).all()
+        if deals:
+            best = min(d.quote(quote['distance_km']) for d in deals)
+            if best > 0:
+                quote['delivery_fee'] = float(round(best / 10.0) * 10)
+                quote['from_partner'] = True
 
     order = Order(
         order_number=generate_order_number(),

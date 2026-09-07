@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}ملفي ومركبتي - توصيل DZ{% endblock %}
+
+{% block content %}
+<div class="dp">
+    <div class="dp-head">
+        <div class="dp-avatar">
+            {% if current_user.photo_url %}<img src="{{ current_user.photo_url }}" alt="">
+            {% else %}<span>{{ current_user.username[0] if current_user.username else '?' }}</span>{% endif %}
+        </div>
+        <div class="dp-id">
+            <h1>{{ current_user.username }}</h1>
+            <p>
+                {% if current_user.total_reviews %}
+                <span class="dp-star">★ {{ current_user.rating }}</span> · {{ current_user.total_reviews }} تقييم ·
+                {% endif %}
+                {{ current_user.wilaya or '' }}{% if current_user.commune %} · {{ current_user.commune }}{% endif %}
+            </p>
+        </div>
+        <div class="dp-partners">
+            <b>{{ partners|length }}</b><span>مطعم شريك</span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {# ═══ المركبة ═══ #}
+        <div class="col-lg-6">
+            <form method="POST" enctype="multipart/form-data" class="dp-card">
+                <input type="hidden" name="section" value="vehicle">
+                <h2>صورتي ومركبتي</h2>
+                <p class="dp-hint">تظهر للمطاعم قبل الاتفاق معك، وللزبون أثناء التوصيل. صورة واضحة تزيد ثقتهم بك.</p>
+
+                <div class="dp-uploads">
+                    <label class="up">
+                        <div class="up-prev">
+                            {% if current_user.photo_url %}<img src="{{ current_user.photo_url }}" alt="">
+                            {% else %}<i class="fas fa-user"></i>{% endif %}
+                        </div>
+                        <span>صورتي الشخصية</span>
+                        <input type="file" name="photo" accept="image/*" hidden>
+                    </label>
+                    <label class="up">
+                        <div class="up-prev">
+                            {% if current_user.vehicle_photo_url %}<img src="{{ current_user.vehicle_photo_url }}" alt="">
+                            {% else %}<i class="fas fa-motorcycle"></i>{% endif %}
+                        </div>
+                        <span>صورة المركبة</span>
+                        <input type="file" name="vehicle_photo" accept="image/*" hidden>
+                    </label>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label>نوع المركبة</label>
+                        <select name="vehicle_type">
+                            <option value="">— اختر —</option>
+                            {% for v in vehicle_types %}
+                            <option value="{{ v }}" {% if current_user.vehicle_type == v %}selected{% endif %}>{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label>الطراز</label>
+                        <input type="text" name="vehicle_model" value="{{ current_user.vehicle_model or '' }}" placeholder="مثلاً: VMS 125">
+                    </div>
+                    <div class="col-6">
+                        <label>اللون</label>
+                        <input type="text" name="vehicle_color" value="{{ current_user.vehicle_color or '' }}" placeholder="أحمر">
+                    </div>
+                    <div class="col-6">
+                        <label>رقم التسجيل</label>
+                        <input type="text" name="vehicle_plate" value="{{ current_user.vehicle_plate or '' }}" dir="ltr" placeholder="00123-116-16">
+                    </div>
+                </div>
+
+                <button type="submit" class="dp-save"><i class="fas fa-floppy-disk"></i> حفظ بيانات المركبة</button>
+            </form>
+        </div>
+
+        {# ═══ عرض الخدمة ═══ #}
+        <div class="col-lg-6">
+            <form method="POST" class="dp-card offer">
+                <input type="hidden" name="section" value="offer">
+                <h2>عرض خدمتي</h2>
+                <p class="dp-hint">حدّد سعرك، والمطاعم تقارن العروض وتختار. أنت من يضع سعره لا المنصة.</p>
+
+                <label class="dp-switch">
+                    <input type="checkbox" name="is_active" {% if not offer or offer.is_active %}checked{% endif %}>
+                    <span>عرضي منشور ومرئي للمطاعم</span>
+                </label>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <label>الرسم الأساسي (د.ج)</label>
+                        <input type="number" name="base_fee" step="10" value="{{ (offer.base_fee if offer else 180)|int }}">
+                    </div>
+                    <div class="col-6">
+                        <label>لكل كيلومتر (د.ج)</label>
+                        <input type="number" name="per_km" step="5" value="{{ (offer.per_km if offer else 15)|int }}">
+                    </div>
+                    <div class="col-6">
+                        <label>لا يقلّ عن (د.ج)</label>
+                        <input type="number" name="min_fee" step="10" value="{{ (offer.min_fee if offer else 150)|int }}">
+                    </div>
+                    <div class="col-6">
+                        <label>أقصى مسافة (كم)</label>
+                        <input type="number" name="max_km" step="1" value="{{ (offer.max_km if offer else 15)|int }}">
+                    </div>
+                    <div class="col-12">
+                        <label>الولاية</label>
+                        <select name="wilaya">
+                            {% set w = offer.wilaya if offer else current_user.wilaya %}
+                            <option value="">— اختر —</option>
+                            {% for code, name in WILAYAS %}
+                            <option value="{{ name }}" {% if w == name %}selected{% endif %}>{{ code }} - {{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label>البلديات التي أغطّيها</label>
+                        <input type="text" name="communes" value="{{ offer.communes if offer else '' }}"
+                               placeholder="باب الوادي، القصبة، بولوغين">
+                    </div>
+                    <div class="col-12">
+                        <label>ملاحظة للمطاعم</label>
+                        <input type="text" name="note" value="{{ offer.note if offer else '' }}"
+                               placeholder="متاح من 10 صباحاً حتى منتصف الليل">
+                    </div>
+                </div>
+
+                <div class="dp-preview">
+                    <span>مثال — توصيلة 5 كم:</span>
+                    <b id="prev5">{{ ((offer.base_fee if offer else 180) + (offer.per_km if offer else 15) * 5)|int }} د.ج</b>
+                </div>
+
+                <button type="submit" class="dp-save"><i class="fas fa-bullhorn"></i> انشر عرضي</button>
+            </form>
+
+            {% if partners %}
+            <div class="dp-card mt-3">
+                <h2>مطاعمي الشريكة</h2>
+                <ul class="dp-partlist">
+                    {% for p in partners %}
+                    <li>
+                        <b>{{ p.restaurant.name_ar if p.restaurant else '—' }}</b>
+                        <span>{{ p.agreed_base|int }} + {{ p.agreed_per_km|int }}/كم</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.up input[type=file]').forEach(inp => {
+    inp.addEventListener('change', e => {
+        const f = e.target.files[0]; if (!f) return;
+        const prev = inp.closest('.up').querySelector('.up-prev');
+        const url = URL.createObjectURL(f);
+        prev.innerHTML = `<img src="${url}" alt="">`;
+    });
+});
+const base = document.querySelector('input[name=base_fee]'), per = document.querySelector('input[name=per_km]');
+function prev() {
+    const v = (parseFloat(base.value) || 0) + (parseFloat(per.value) || 0) * 5;
+    document.getElementById('prev5').textContent = Math.round(v) + ' د.ج';
+}
+[base, per].forEach(el => el && el.addEventListener('input', prev));
+</script>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.dp { max-width: 980px; margin: 0 auto; }
+.dp-head {
+    background: linear-gradient(135deg, #1b2d24 0%, #33513f 100%); color: #fff;
+    border-radius: 20px; padding: 24px 28px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+.dp-avatar { width: 74px; height: 74px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+             background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center;
+             font-size: 1.9rem; font-weight: 800; }
+.dp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.dp-id { flex: 1 1 200px; }
+.dp-id h1 { font-weight: 800; font-size: 1.45rem; margin: 0 0 4px; }
+.dp-id p { margin: 0; color: rgba(255,255,255,.75); font-size: .88rem; }
+.dp-star { color: #ffd66b; font-weight: 700; }
+.dp-partners { text-align: center; }
+.dp-partners b { display: block; font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+.dp-partners span { font-size: .76rem; color: rgba(255,255,255,.7); }
+
+.dp-card { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 24px; }
+.dp-card.offer { border-color: #bfdccd; }
+.dp-card h2 { font-weight: 800; font-size: 1.14rem; color: #12201a; margin: 0 0 4px; }
+.dp-hint { color: #7b8c84; font-size: .86rem; margin: 0 0 16px; line-height: 1.75; }
+.dp-card label { display: block; font-size: .82rem; color: #55665e; font-weight: 600; margin-bottom: 5px; }
+.dp-card input[type=text], .dp-card input[type=number], .dp-card select {
+    width: 100%; border: 1px solid #e2eae6; border-radius: 10px; padding: 9px 12px;
+    font-family: inherit; font-size: .93rem; background: #fafcfb;
+}
+.dp-card input:focus, .dp-card select:focus { outline: none; border-color: #006633; background: #fff; }
+
+.dp-uploads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.up { cursor: pointer; text-align: center; margin: 0; }
+.up-prev {
+    height: 118px; border-radius: 14px; background: #f4f8f6; border: 2px dashed #d5e2db;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    color: #a8bab1; font-size: 1.9rem; margin-bottom: 7px; transition: border-color .2s;
+}
+.up:hover .up-prev { border-color: #006633; }
+.up-prev img { width: 100%; height: 100%; object-fit: cover; }
+.up span { font-size: .82rem; color: #55665e; font-weight: 600; }
+
+.dp-switch { display: flex; align-items: center; gap: 9px; cursor: pointer; margin-bottom: 4px; }
+.dp-switch input { width: 18px; height: 18px; accent-color: #006633; }
+.dp-switch span { font-weight: 700; color: #12201a; font-size: .92rem; margin: 0; }
+
+.dp-preview {
+    background: #eef4f0; border-radius: 12px; padding: 12px 16px; margin: 18px 0 0;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+.dp-preview span { font-size: .85rem; color: #55665e; }
+.dp-preview b { font-size: 1.2rem; font-weight: 800; color: #006633; }
+
+.dp-save {
+    margin-top: 18px; width: 100%; background: #006633; color: #fff; border: 0;
+    border-radius: 11px; padding: 12px; font-family: inherit; font-weight: 700; cursor: pointer;
+}
+.dp-save:hover { background: #004d26; }
+
+.dp-partlist { list-style: none; padding: 0; margin: 0; }
+.dp-partlist li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0;
+                  border-bottom: 1px solid #f1f5f3; font-size: .9rem; }
+.dp-partlist li:last-child { border-bottom: 0; }
+.dp-partlist b { color: #12201a; }
+.dp-partlist span { color: #7b8c84; font-size: .84rem; }
+
+@media (max-width: 575px) { .dp-uploads { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}

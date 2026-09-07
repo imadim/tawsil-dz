@@ -273,6 +273,17 @@
                                 <i class="fas fa-chart-column"></i> أرباحي
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('driver_market') }}">
+                                <i class="fas fa-handshake"></i> سوق السائقين
+                            </a>
+                        </li>
+                        {% elif current_user.role == 'driver' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('driver_profile') }}">
+                                <i class="fas fa-id-card"></i> ملفي وعرضي
+                            </a>
+                        </li>
                         {% elif current_user.role == 'customer' %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('my_orders') }}">

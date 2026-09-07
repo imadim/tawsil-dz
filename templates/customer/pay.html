@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}دفع الطلب {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="pay">
+    {% if PAYMENTS_SANDBOX %}
+    <div class="pay-sandbox">
+        <i class="fas fa-flask"></i>
+        <div>
+            <b>وضع تجريبي</b>
+            <span>لا يُخصم أي مبلغ حقيقي. البوابة البنكية تُوصَل بمفاتيح تاجر من SATIM أو بريد الجزائر.</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="pay-sum">
+        <h1>دفع الطلب</h1>
+        <p dir="ltr">{{ order.order_number }}</p>
+        <div class="pay-lines">
+            <div><span>الطعام</span><b>{{ order.total_amount|currency }}</b></div>
+            <div><span>التوصيل</span><b>{{ order.delivery_fee|currency }}</b></div>
+            <div><span>الخدمة</span><b>{{ order.platform_fee|currency }}</b></div>
+            <div class="total"><span>المجموع</span><b>{{ order.final_amount|currency }}</b></div>
+        </div>
+    </div>
+
+    <form method="POST" id="payForm">
+        <h2>اختر طريقة الدفع</h2>
+
+        <label class="pm" for="m-baridimob">
+            <input type="radio" name="method" value="baridimob" id="m-baridimob" checked>
+            <span class="pm-icon bm"><i class="fas fa-mobile-screen"></i></span>
+            <span class="pm-txt">
+                <b>بريدي موب</b>
+                <small>تحويل من حسابك البريدي عبر تطبيق BaridiMob</small>
+            </span>
+            <span class="pm-check"><i class="fas fa-circle-check"></i></span>
+        </label>
+
+        <label class="pm" for="m-visa">
+            <input type="radio" name="method" value="visa" id="m-visa">
+            <span class="pm-icon vs"><i class="fas fa-credit-card"></i></span>
+            <span class="pm-txt">
+                <b>بطاقة بنكية</b>
+                <small>الذهبية Edahabia أو CIB أو Visa</small>
+            </span>
+            <span class="pm-check"><i class="fas fa-circle-check"></i></span>
+        </label>
+
+        {# ═══ تفاصيل بريدي موب ═══ #}
+        <div class="pm-panel" data-for="baridimob">
+            <div class="bm-account">
+                <span>حوّل إلى الحساب البريدي</span>
+                <b dir="ltr">0020 0001 2345 6789 01</b>
+                <small>باسم: توصيل DZ</small>
+            </div>
+            <label class="fld">
+                <span>رقم عملية التحويل (اختياري)</span>
+                <input type="text" name="note" placeholder="مثلاً: 458921" dir="ltr">
+            </label>
+        </div>
+
+        {# ═══ تفاصيل البطاقة ═══ #}
+        <div class="pm-panel" data-for="visa" hidden>
+            <div class="card-note">
+                <i class="fas fa-shield-halved"></i>
+                لأمانك، بيانات البطاقة تُدخَل في صفحة البنك نفسه بعد الضغط على «ادفع» —
+                ولا تمرّ عبر خوادم توصيل DZ ولا تُحفظ لدينا.
+            </div>
+        </div>
+
+        {% if PAYMENTS_SANDBOX %}
+        <label class="sim">
+            <input type="checkbox" name="simulate" value="fail">
+            <span>محاكاة عملية فاشلة (لاختبار معالجة الأخطاء)</span>
+        </label>
+        {% endif %}
+
+        <button type="submit" class="pay-btn">
+            <i class="fas fa-lock"></i> ادفع {{ order.final_amount|currency }}
+        </button>
+        <a href="{{ url_for('my_orders') }}" class="pay-back">العودة إلى طلباتي</a>
+    </form>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('input[name=method]').forEach(r => {
+    r.addEventListener('change', () => {
+        document.querySelectorAll('.pm').forEach(l => l.classList.toggle('on', l.contains(r) && r.checked));
+        document.querySelectorAll('.pm-panel').forEach(p => { p.hidden = p.dataset.for !== r.value; });
+    });
+});
+document.querySelector('input[name=method]:checked')?.dispatchEvent(new Event('change'));
+</script>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+.pay { max-width: 560px; margin: 0 auto; }
+.pay-sandbox {
+    display: flex; gap: 13px; align-items: flex-start;
+    background: #fff8e6; border: 1px solid #eddfae; border-radius: 14px;
+    padding: 14px 17px; margin-bottom: 18px;
+}
+.pay-sandbox i { color: #b0860f; font-size: 1.15rem; margin-top: 2px; }
+.pay-sandbox b { display: block; color: #7a5c07; font-size: .95rem; }
+.pay-sandbox span { color: #8a6a1a; font-size: .85rem; line-height: 1.75; }
+
+.pay-sum { background: #fff; border: 1px solid #e6ede9; border-radius: 18px; padding: 22px 24px; margin-bottom: 18px; }
+.pay-sum h1 { font-weight: 800; font-size: 1.4rem; color: #12201a; margin: 0 0 2px; }
+.pay-sum > p { color: #9aaaa3; font-size: .82rem; margin: 0 0 16px; }
+.pay-lines { display: grid; gap: 9px; }
+.pay-lines div { display: flex; justify-content: space-between; font-size: .93rem; color: #55665e; }
+.pay-lines b { color: #12201a; font-weight: 600; }
+.pay-lines .total { border-top: 1px solid #eef3f0; padding-top: 11px; margin-top: 3px; font-size: 1.05rem; }
+.pay-lines .total b { font-size: 1.2rem; font-weight: 800; color: #006633; }
+
+form h2 { font-weight: 800; font-size: 1.08rem; color: #12201a; margin: 0 0 13px; }
+.pm {
+    display: flex; align-items: center; gap: 13px; cursor: pointer;
+    background: #fff; border: 2px solid #e6ede9; border-radius: 15px;
+    padding: 15px 17px; margin-bottom: 11px; transition: border-color .18s, background .18s;
+}
+.pm:hover { border-color: #bfdccd; }
+.pm.on { border-color: #006633; background: #f7fcf9; }
+.pm input { display: none; }
+.pm-icon { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center;
+           justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+.pm-icon.bm { background: #e6f0fb; color: #14508f; }
+.pm-icon.vs { background: #eef0f7; color: #2c3a72; }
+.pm-txt { flex: 1; }
+.pm-txt b { display: block; color: #12201a; font-size: 1rem; }
+.pm-txt small { color: #7b8c84; font-size: .82rem; }
+.pm-check { color: #dde5e0; font-size: 1.3rem; }
+.pm.on .pm-check { color: #006633; }
+
+.pm-panel { background: #fff; border: 1px solid #e6ede9; border-radius: 15px; padding: 18px; margin-bottom: 14px; }
+.bm-account { background: #f6faf8; border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 14px; }
+.bm-account span { display: block; font-size: .82rem; color: #7b8c84; margin-bottom: 5px; }
+.bm-account b { display: block; font-size: 1.15rem; font-weight: 800; color: #12201a; letter-spacing: .06em; }
+.bm-account small { color: #9aaaa3; font-size: .78rem; }
+.fld span { display: block; font-size: .83rem; color: #55665e; font-weight: 600; margin-bottom: 5px; }
+.fld input { width: 100%; border: 1px solid #e2eae6; border-radius: 10px; padding: 10px 13px;
+             font-family: inherit; font-size: .94rem; background: #fafcfb; }
+.fld input:focus { outline: none; border-color: #006633; background: #fff; }
+.card-note { color: #55665e; font-size: .87rem; line-height: 1.85; }
+.card-note i { color: #006633; margin-inline-end: 5px; }
+
+.sim { display: flex; align-items: center; gap: 9px; margin: 4px 0 16px; cursor: pointer;
+       font-size: .85rem; color: #8a6a1a; }
+.sim input { width: 16px; height: 16px; accent-color: #b0860f; }
+
+.pay-btn { width: 100%; background: #006633; color: #fff; border: 0; border-radius: 13px;
+           padding: 15px; font-family: inherit; font-size: 1.02rem; font-weight: 800; cursor: pointer; }
+.pay-btn:hover { background: #004d26; }
+.pay-back { display: block; text-align: center; margin-top: 13px; color: #7b8c84;
+            text-decoration: none; font-size: .9rem; }
+.pay-back:hover { color: #006633; }
+</style>
+{% endblock %}
