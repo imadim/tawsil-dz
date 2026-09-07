@@ -224,8 +224,9 @@ if os.environ.get('FIREBASE_API_KEY'):
         'vapidKey':          os.environ.get('FIREBASE_VAPID_KEY', ''),
     }
 
-# ── بيانات الدخول التجريبية: مخفية إلا إذا فُعّلت صراحةً ──
-SHOW_DEMO_LOGINS = os.environ.get('SHOW_DEMO_LOGINS', '0') == '1'
+# ── بيانات الدخول التجريبية: ظاهرة افتراضياً (نموذج أولي للعرض).
+#    قبل الإطلاق الحقيقي: ضع SHOW_DEMO_LOGINS=0 في متغيرات البيئة لإخفائها. ──
+SHOW_DEMO_LOGINS = os.environ.get('SHOW_DEMO_LOGINS', '1') == '1'
 PAYMENT_METHODS = {
     'cash':       {'label': 'نقداً عند الاستلام', 'icon': 'fa-money-bill-wave', 'online': False},
     'baridimob':  {'label': 'بريدي موب',          'icon': 'fa-mobile-screen',   'online': True},
