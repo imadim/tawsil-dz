@@ -257,9 +257,21 @@
                             <h5 class="section-title">
                                 <i class="fas fa-info-circle"></i> المعلومات الأساسية
                             </h5>
-                            <a href="{{ url_for('restaurant_register') }}" class="btn btn-success">
-                                <i class="fas fa-store"></i> سجّل مطعمك
-                            </a>
+                        </div>
+
+                        {% set pre = request.args.get('role', 'customer') %}
+                        <div class="col-12 mb-4 form-group">
+                            <label for="role" class="form-label">
+                                نوع الحساب <span class="required-star">*</span>
+                            </label>
+                            <select name="role" id="role" class="form-select form-select-lg" required>
+                                <option value="customer"  {% if pre == 'customer'   %}selected{% endif %}>🛒 زبون — أطلب الأكل</option>
+                                <option value="driver"    {% if pre == 'driver'     %}selected{% endif %}>🏍️ سائق — أوصّل الطلبات</option>
+                                <option value="restaurant"{% if pre == 'restaurant' %}selected{% endif %}>🍽️ صاحب مطعم — أبيع الأكل</option>
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                اختر نوع حسابك أولاً — يتغيّر النموذج حسب اختيارك.
+                            </small>
                         </div>
 
                         <div class="col-md-6 mb-3 form-group">
@@ -333,18 +345,6 @@
                             </div>
                         </div>
 
-                        <div class="col-12 mb-4 form-group">
-                            <label for="role" class="form-label">
-                                نوع الحساب <span class="required-star">*</span>
-                            </label>
-                            <select name="role" id="role" class="form-select form-select-lg" required>
-                                <option value="customer">🛒 زبون -  </option>
-                                <option value="driver">🏍️ سائق -  </option>
-                            
-                               <option value="restaurant">🍽️ صاحب مطعم</option>
-                               
-                            </select>
-                        </div>
                     </div>
 
                     <!-- Restaurant Fields -->
@@ -492,6 +492,12 @@
     role.addEventListener('change', function () {
         if (this.value === 'restaurant') {
             window.location.href = "{{ url_for('restaurant_register') }}";
+        }
+    });
+    // احترام ?role= القادم من صفحة البداية: طبّق الاختيار فور التحميل
+    window.addEventListener('DOMContentLoaded', function () {
+        if (role.value && role.value !== 'customer') {
+            role.dispatchEvent(new Event('change'));
         }
     });
 })();
