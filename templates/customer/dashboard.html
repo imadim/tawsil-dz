@@ -271,7 +271,7 @@
         const filtering = !!(t || w.value || cu.value || rt.value) || !op.checked;
         none.style.display = shown ? 'none' : '';
         rs.hidden = !filtering;
-        cnt.textContent = shown === items.length ? '' : `يظهر ${shown} من ${items.length} مطعم`;
+        cnt.textContent = shown === items.length ? '' : `يظهر ${shown} من أصل ${items.length}`;
     }
     [q, w, cu, rt, op].forEach(el => { el.addEventListener('input', apply); el.addEventListener('change', apply); });
     rs.addEventListener('click', () => { q.value=''; w.value=''; cu.value=''; rt.value=''; op.checked=true; apply(); });

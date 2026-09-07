@@ -50,16 +50,22 @@
 {% endif %}
                 </form>
                 <hr>
+                <p class="text-center mb-2">
+                    <a href="{{ url_for('forgot_password') }}" class="text-muted small">نسيت كلمة السر؟</a>
+                </p>
                 <p class="text-center mb-0">
-                    لايوجد عندك حساب؟ 
+                    ليس لديك حساب؟
                     <a href="{{ url_for('register') }}">سجّل الآن</a>
                 </p>
-                <div class="mt-3 p-3 bg-light rounded">
-                    <small class="text-muted d-block mb-2"><strong>حسابات للتجربة:</strong></small>
-                    <small class="d-block">👤 زبون: client@test.dz / client123</small>
-                    <small class="d-block">🚗 سائق: chauffeur@test.dz / chauffeur123</small>
-                    <small class="d-block">🍽️ مطعم: restaurant@test.dz / restaurant123</small>
+
+                {% if SHOW_DEMO_LOGINS %}
+                <div class="mt-3 p-3 demo-box">
+                    <small class="d-block mb-2"><strong>وضع العرض التجريبي</strong> — هذه الحسابات للتجربة فقط</small>
+                    <small class="d-block">زبون: client@test.dz / client123</small>
+                    <small class="d-block">سائق: chauffeur@test.dz / chauffeur123</small>
+                    <small class="d-block">مطعم: restaurant@test.dz / restaurant123</small>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -79,5 +85,6 @@
     padding: 12px; color: #33443c; text-decoration: none; font-weight: 600; font-size: .95rem;
 }
 .google-btn:hover { background: #f7faf9; border-color: #c8d5ce; color: #12201a; }
+.demo-box { background: #fff8e6; border: 1px solid #eddfae; border-radius: 12px; color: #7a5c07; }
 </style>
 {% endblock %}

@@ -129,7 +129,7 @@
                                     <i class="fas fa-minus"></i>
                                 </button>
                                 <input type="number" class="form-control text-center qty-input" 
-                                       id="qty_{{ item.id }}" value="0" min="0" readonly 
+                                       id="qty_{{ item.id }}" value="1" min="1" readonly 
                                        style="max-width:60px;">
                                 <button class="btn btn-outline-secondary btn-qty-plus" type="button" 
                                         data-item-id="{{ item.id }}">
@@ -156,14 +156,17 @@
     </div>
     
     <!-- Shopping Cart — exactly the same as original -->
-    <div class="col-lg-4">
-        <div class="cart-summary sticky-top" style="top: 20px;">
+    <div class="col-lg-4" id="cartColumn">
+        <div class="cart-summary" style="top: 20px;">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        <i class="fas fa-shopping-cart"></i> 
+                        <i class="fas fa-shopping-cart"></i>
                         السلة (<span id="cartCount">0</span>)
                     </h5>
+                    <button type="button" class="sheet-close d-lg-none" onclick="closeCartSheet()" aria-label="إغلاق السلة">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                 </div>
                 <div class="card-body">
                     <div id="cartItems" class="mb-3">
@@ -176,11 +179,11 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>التوصيل:</span>
-                        <strong>200 د.ج</strong>
+                        <strong id="cartDelivery">0 د.ج</strong>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span>خدمة:</span>
-                        <strong>50 د.ج</strong>
+                        <span>رسوم الخدمة:</span>
+                        <strong id="cartService">0 د.ج</strong>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
@@ -189,12 +192,25 @@
                     </div>
                     <button class="btn btn-success w-100" id="checkoutBtn" disabled 
                             data-bs-toggle="modal" data-bs-target="#checkoutModal">
-                        <i class="fas fa-check"></i> كمّل الطلبية
+                        <i class="fas fa-check"></i> أكمل الطلب
                     </button>
+                    <p class="fees-hint">
+                        <i class="fas fa-circle-info"></i>
+                        التوصيل {{ '%d'|format(200) }} د.ج والخدمة 50 د.ج تُضاف عند وجود أصناف في السلة.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- شريط السلة السفلي — على الهاتف فقط -->
+<div class="cart-bar" id="cartBar" hidden>
+    <button type="button" class="cb-open" onclick="openCartSheet()">
+        <span class="cb-count" id="cbCount">0</span>
+        <span class="cb-label">عرض السلة</span>
+    </button>
+    <span class="cb-total" id="cbTotal">0 د.ج</span>
 </div>
 
 <!-- Checkout Modal — exactly the same as original -->
@@ -452,21 +468,39 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateQuantity(itemId, change) {
     const input = document.getElementById(`qty_${itemId}`);
     let value = parseInt(input.value) + change;
-    if (value < 0) value = 0;
+    if (value < 1) value = 1;
     input.value = value;
 }
 
 function addToCart(itemId, itemName, itemPrice) {
-    const qty = parseInt(document.getElementById(`qty_${itemId}`).value);
-    if (qty <= 0) { alert('⚠️ اختر الكمية أولاً'); return; }
+    const qty = parseInt(document.getElementById(`qty_${itemId}`).value) || 1;
     if (cart[itemId]) {
         cart[itemId].quantity += qty;
     } else {
         cart[itemId] = { id: itemId, name: itemName, price: itemPrice, quantity: qty };
     }
-    document.getElementById(`qty_${itemId}`).value = 0;
+    document.getElementById(`qty_${itemId}`).value = 1;
     updateCartDisplay();
     showToast('تمت ✅', `أضفنا ${itemName} للسلة`);
+}
+
+document.addEventListener('click', function (e) {
+    const col = document.getElementById('cartColumn');
+    if (col && col.classList.contains('open') && e.target === col) closeCartSheet();
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCartSheet(); });
+
+function openCartSheet() {
+    const col = document.getElementById('cartColumn');
+    if (!col) return;
+    col.classList.add('open');
+    document.body.classList.add('cart-open');
+}
+function closeCartSheet() {
+    const col = document.getElementById('cartColumn');
+    if (!col) return;
+    col.classList.remove('open');
+    document.body.classList.remove('cart-open');
 }
 
 function removeFromCart(itemId) {
@@ -498,11 +532,30 @@ function updateCartDisplay() {
             </div>`;
     }
     
+    const isEmpty = count === 0;
     cartItemsDiv.innerHTML = html || '<p class="text-muted text-center">السلة فارغة</p>';
     document.getElementById('cartCount').textContent    = count;
     document.getElementById('cartSubtotal').textContent = subtotal.toLocaleString() + ' د.ج';
-    
-    const grandTotal = subtotal + DELIVERY_FEE + PLATFORM_FEE;
+
+    // السلة الفارغة لا تحمل رسوماً — كانت تعرض 250 د.ج مستحقة على لا شيء
+    const delivery = isEmpty ? 0 : DELIVERY_FEE;
+    const service  = isEmpty ? 0 : PLATFORM_FEE;
+    const dEl = document.getElementById('cartDelivery');
+    const sEl = document.getElementById('cartService');
+    if (dEl) dEl.textContent = delivery.toLocaleString() + ' د.ج';
+    if (sEl) sEl.textContent = service.toLocaleString() + ' د.ج';
+
+    const grandTotal = subtotal + delivery + service;
+
+    // شريط الهاتف السفلي
+    const bar = document.getElementById('cartBar');
+    if (bar) {
+        bar.hidden = isEmpty;
+        const cb = document.getElementById('cbCount');
+        const ct = document.getElementById('cbTotal');
+        if (cb) cb.textContent = count;
+        if (ct) ct.textContent = grandTotal.toLocaleString() + ' د.ج';
+    }
     document.getElementById('cartTotal').textContent       = grandTotal.toLocaleString() + ' د.ج';
     document.getElementById('modalSubtotal').textContent   = subtotal.toLocaleString() + ' د.ج';
     document.getElementById('modalGrandTotal').textContent = grandTotal.toLocaleString() + ' د.ج';
@@ -611,6 +664,52 @@ function showToast(title, message) {
 
 {% block extra_css %}
 <style>
+/* ═══ السلة على الحاسوب: عمود ثابت ═══ */
+@media (min-width: 992px) {
+    .cart-summary { position: sticky; top: 20px; }
+}
+
+/* ═══ السلة على الهاتف: شريط سفلي يفتح ورقة ═══ */
+.cart-bar {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 1040;
+    background: #006633; color: #fff; padding: 11px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    box-shadow: 0 -4px 18px rgba(0,0,0,.18);
+}
+.cb-open { background: rgba(255,255,255,.16); border: 0; color: #fff; border-radius: 10px;
+           padding: 9px 16px; font-family: inherit; font-weight: 700; font-size: .92rem;
+           display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+.cb-count { background: #fff; color: #006633; border-radius: 50%; width: 23px; height: 23px;
+            display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; }
+.cb-total { font-size: 1.05rem; font-weight: 800; }
+
+@media (min-width: 992px) { .cart-bar { display: none !important; } }
+
+@media (max-width: 991px) {
+    /* العمود لا يطفو فوق الوجبات — يظهر كورقة عند الطلب فقط */
+    #cartColumn {
+        position: fixed; inset: 0; z-index: 1060; background: rgba(10,20,15,.5);
+        padding: 0; display: none; align-items: flex-end;
+    }
+    #cartColumn.open { display: flex; }
+    #cartColumn .cart-summary {
+        width: 100%; max-height: 84vh; overflow-y: auto;
+        border-radius: 20px 20px 0 0; background: #fff;
+        animation: sheetUp .22s ease-out;
+    }
+    #cartColumn .card { border: 0; box-shadow: none; }
+    #cartColumn .card-header { border-radius: 20px 20px 0 0; position: sticky; top: 0; z-index: 2; }
+    body.cart-open { overflow: hidden; }
+    .cart-bar { padding-bottom: calc(11px + env(safe-area-inset-bottom, 0px)); }
+    /* مساحة أسفل الصفحة حتى لا يغطّي الشريط آخر وجبة */
+    .container { padding-bottom: 78px; }
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.fees-hint { color: #9aaaa3; font-size: .78rem; margin: 10px 0 0; line-height: 1.7; }
+.sheet-close { background: rgba(255,255,255,.2); border: 0; color: #fff; border-radius: 9px;
+               width: 34px; height: 30px; cursor: pointer; }
+
 .menu-rate {
     display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
     background: #fff8e6; border: 1px solid #eddfae; border-radius: 10px;

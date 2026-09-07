@@ -226,9 +226,12 @@
 </head>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
+{% if FIREBASE_CONFIG %}
+<script>window.FIREBASE_CONFIG = {{ FIREBASE_CONFIG|tojson }};</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="{{ url_for('static', filename='js/firebase-messaging.js') }}"></script>
+{% endif %}
 
 
 <body>

@@ -210,6 +210,22 @@ GOOGLE_ENABLED       = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 # الوضع التجريبي هو الافتراضي: يحاكي البوابة ويوسم كل عملية بأنها تجريبية.
 # لتفعيل الدفع الحقيقي: PAYMENTS_SANDBOX=0 مع مفاتيح التاجر من SATIM/بريد الجزائر.
 PAYMENTS_SANDBOX = os.environ.get('PAYMENTS_SANDBOX', '1') != '0'
+
+# ── إشعارات Firebase (اختيارية) — لا تُحمَّل ما لم تُضبط مفاتيح حقيقية ──
+FIREBASE_CONFIG = None
+if os.environ.get('FIREBASE_API_KEY'):
+    FIREBASE_CONFIG = {
+        'apiKey':            os.environ.get('FIREBASE_API_KEY'),
+        'authDomain':        os.environ.get('FIREBASE_AUTH_DOMAIN', ''),
+        'projectId':         os.environ.get('FIREBASE_PROJECT_ID', ''),
+        'storageBucket':     os.environ.get('FIREBASE_STORAGE_BUCKET', ''),
+        'messagingSenderId': os.environ.get('FIREBASE_SENDER_ID', ''),
+        'appId':             os.environ.get('FIREBASE_APP_ID', ''),
+        'vapidKey':          os.environ.get('FIREBASE_VAPID_KEY', ''),
+    }
+
+# ── بيانات الدخول التجريبية: مخفية إلا إذا فُعّلت صراحةً ──
+SHOW_DEMO_LOGINS = os.environ.get('SHOW_DEMO_LOGINS', '0') == '1'
 PAYMENT_METHODS = {
     'cash':       {'label': 'نقداً عند الاستلام', 'icon': 'fa-money-bill-wave', 'online': False},
     'baridimob':  {'label': 'بريدي موب',          'icon': 'fa-mobile-screen',   'online': True},
@@ -388,6 +404,23 @@ def ensure_schema():
                         text("UPDATE restaurants SET commune = :new WHERE commune = :old"),
                         {"new": new, "old": old}
                     )
+                # أطباق مكررة من البذرة القديمة («شربة فريك» مقابل «شوربة فريك»)
+                for stale in ['شربة فريك', 'كسكس باللحم', 'طاجين زيتون']:
+                    conn.execute(text(
+                        "DELETE FROM menu_items WHERE name_ar = :n AND id NOT IN "
+                        "(SELECT menu_item_id FROM order_items WHERE menu_item_id IS NOT NULL)"
+                    ), {"n": stale})
+
+                # تقييم بلا مراجعات = رقم وهمي — نصفّره ليظهر المطعم «جديد»
+                conn.execute(text(
+                    "UPDATE restaurants SET rating = 0, total_reviews = 0 "
+                    "WHERE id NOT IN (SELECT target_id FROM reviews WHERE target_type = 'restaurant')"
+                ))
+                conn.execute(text(
+                    "UPDATE users SET rating = 0, total_reviews = 0 "
+                    "WHERE id NOT IN (SELECT target_id FROM reviews WHERE target_type = 'driver')"
+                ))
+
                 for name_ar, c in {"مطعم الأصالة": "مأكولات جزائرية",
                                    "فاست فود الوفاء": "فاست فود"}.items():
                     conn.execute(
@@ -479,9 +512,6 @@ def init_database():
             
             # Add Algerian menu items
             menu_items = [
-                {'name_ar': 'كسكسي بالدجاج', 'price': 800.0, 'category_ar': 'أطباق رئيسية'},
-                {'name_ar': 'شربة فريك', 'price': 300.0, 'category_ar': 'شوربة'},
-                {'name_ar': 'طاجين زيتون', 'price': 900.0, 'category_ar': 'أطباق رئيسية'},
                 {'name_ar': 'بوراك بالجبن', 'price': 400.0, 'category_ar': 'مقبلات'},
                 {'name_ar': 'دولما', 'price': 700.0, 'category_ar': 'أطباق رئيسية'},
                 {'name_ar': 'مثوم', 'price': 350.0, 'category_ar': 'مقبلات'},
@@ -782,12 +812,32 @@ def admin_toggle_restaurant(r_id):
 # AUTHENTICATION ROUTES
 # ============================================
 
+@app.template_filter('plural')
+def ar_plural(n, one, two, few, many=None):
+    """صيغة الجمع العربية: 1 مطعم · 2 مطعمان · 3-10 مطاعم · 11+ مطعماً"""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return f'{n} {one}'
+    many = many or few
+    if n == 0:
+        return f'لا {few}'
+    if n == 1:
+        return one
+    if n == 2:
+        return two
+    if 3 <= n % 100 <= 10:
+        return f'{n} {few}'
+    return f'{n} {many}'
+
+
 @app.context_processor
 def inject_lists():
     """الولايات والتصنيفات متاحة في كل القوالب"""
     return dict(WILAYAS=WILAYAS, WILAYA_NAMES=WILAYA_NAMES, CUISINES=CUISINES,
                 STATUS_AR=STATUS_AR, GOOGLE_ENABLED=GOOGLE_ENABLED,
-                PAYMENT_METHODS=PAYMENT_METHODS, PAYMENTS_SANDBOX=PAYMENTS_SANDBOX)
+                PAYMENT_METHODS=PAYMENT_METHODS, PAYMENTS_SANDBOX=PAYMENTS_SANDBOX,
+                FIREBASE_CONFIG=FIREBASE_CONFIG, SHOW_DEMO_LOGINS=SHOW_DEMO_LOGINS)
 
 
 @app.route('/')
@@ -1656,6 +1706,40 @@ def toggle_menu_item(item_id):
         'message': f'«{item.name_ar}» متاح الآن' if item.is_available
                    else f'«{item.name_ar}» أصبح غير متاح مؤقتاً'
     })
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """استرجاع الحساب — بلا خادم بريد، يفتح طلباً تعالجه الإدارة"""
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+
+        # لا نكشف إن كان البريد مسجّلاً أم لا — حماية من حصر الحسابات
+        if user:
+            for admin in User.query.filter_by(role='admin').all():
+                create_notification(
+                    admin.id, '🔑 طلب استرجاع كلمة سر',
+                    f'{user.username} ({user.email}) يطلب إعادة تعيين كلمة سره', None
+                )
+        flash('إن كان البريد مسجّلاً لدينا، ستتواصل معك الإدارة على الرقم المرتبط بالحساب.', 'info')
+        return redirect(url_for('login'))
+
+    return render_template('forgot_password.html')
+
+
+@app.route('/admin/user/reset-password/<int:u_id>', methods=['POST'])
+@admin_required
+def admin_reset_password(u_id):
+    """المشرف يولّد كلمة سر مؤقتة ويسلّمها لصاحب الحساب"""
+    import secrets, string
+    user = User.query.get_or_404(u_id)
+    alphabet = string.ascii_lowercase + string.digits
+    temp = ''.join(secrets.choice(alphabet) for _ in range(10))
+    user.set_password(temp)
+    db.session.commit()
+    flash(f'كلمة سر مؤقتة لـ {user.username}: {temp} — سلّمها له واطلب تغييرها فوراً', 'success')
+    return redirect(request.referrer or url_for('admin_panel'))
 
 
 @app.route('/account', methods=['GET', 'POST'])

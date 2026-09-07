@@ -14,42 +14,42 @@ RESTAURANTS = [
          desc="مأكولات جزائرية أصيلة تُطهى يومياً على الطريقة التقليدية",
          cuisine="مأكولات جزائرية", wilaya="الجزائر", commune="باب الوادي",
          address="شارع ديدوش مراد، الجزائر الوسطى", phone="0540123456",
-         lat=36.7853, lng=3.0603, img="rest-asala.jpg", rating=4.6, commission=10.0,
+         lat=36.7853, lng=3.0603, img="rest-asala.jpg", commission=10.0,
          owner=dict(username="مطعم الأصالة", email="restaurant@test.dz", phone="0540123456")),
 
     dict(key="wafa", name="Fast Food El Wafa", name_ar="فاست فود الوفاء",
          desc="وجبات سريعة طازجة: برغر، تاكوس، وشاورما",
          cuisine="فاست فود", wilaya="الجزائر", commune="حيدرة",
          address="حي حيدرة، الجزائر", phone="0550234567",
-         lat=36.7538, lng=3.0300, img="rest-wafa.jpg", rating=4.2, commission=10.0,
+         lat=36.7538, lng=3.0300, img="rest-wafa.jpg", commission=10.0,
          owner=dict(username="فاست فود الوفاء", email="fastfood@test.dz", phone="0550234567")),
 
     dict(key="amir", name="Grillades El Amir", name_ar="مشويات الأمير",
          desc="لحوم مشوية على الفحم، بروشيت ومرغاز وشواء مشكّل",
          cuisine="مشاوي", wilaya="وهران", commune="بئر الجير",
          address="شارع الأمير عبد القادر، بئر الجير", phone="0561345678",
-         lat=35.7100, lng=-0.5800, img="rest-amir.jpg", rating=4.8, commission=12.0,
+         lat=35.7100, lng=-0.5800, img="rest-amir.jpg", commission=12.0,
          owner=dict(username="مشويات الأمير", email="amir@test.dz", phone="0561345678")),
 
     dict(key="napoli", name="Pizza Napoli", name_ar="بيتزا نابولي",
          desc="بيتزا بعجينة إيطالية وباستا محضّرة في المكان",
          cuisine="بيتزا", wilaya="قسنطينة", commune="سيدي مبروك",
          address="حي سيدي مبروك، قسنطينة", phone="0554456789",
-         lat=36.3650, lng=6.6147, img="rest-napoli.jpg", rating=4.4, commission=10.0,
+         lat=36.3650, lng=6.6147, img="rest-napoli.jpg", commission=10.0,
          owner=dict(username="بيتزا نابولي", email="napoli@test.dz", phone="0554456789")),
 
     dict(key="yasmine", name="Patisserie El Yasmine", name_ar="حلويات الياسمين",
          desc="حلويات شرقية وغربية، بقلاوة وكريب ومثلجات",
          cuisine="حلويات ومرطبات", wilaya="سطيف", commune="سطيف",
          address="وسط مدينة سطيف", phone="0670567890",
-         lat=36.1900, lng=5.4100, img="rest-yasmine.jpg", rating=4.7, commission=8.0,
+         lat=36.1900, lng=5.4100, img="rest-yasmine.jpg", commission=8.0,
          owner=dict(username="حلويات الياسمين", email="yasmine@test.dz", phone="0670567890")),
 
     dict(key="bahr", name="Restaurant El Bahr", name_ar="مطعم البحر الأبيض",
          desc="سمك طازج يومياً من ميناء عنابة، قمرون وكالامار",
          cuisine="مأكولات بحرية", wilaya="عنابة", commune="سيدي سالم",
          address="الواجهة البحرية، عنابة", phone="0552678901",
-         lat=36.9000, lng=7.7667, img="rest-bahr.jpg", rating=4.5, commission=12.0,
+         lat=36.9000, lng=7.7667, img="rest-bahr.jpg", commission=12.0,
          owner=dict(username="مطعم البحر الأبيض", email="bahr@test.dz", phone="0552678901")),
 ]
 
@@ -193,7 +193,6 @@ def seed(db, User, Restaurant, MenuItem, Wallet=None):
         rest.latitude        = r["lat"]
         rest.longitude       = r["lng"]
         rest.image_url       = IMG + r["img"]
-        rest.rating          = r["rating"]
         rest.commission_rate = r["commission"]
         rest.is_open         = True
         db.session.commit()

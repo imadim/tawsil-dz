@@ -137,7 +137,7 @@
     <div class="sec-head">
         <div>
             <h2>المطاعم المتاحة</h2>
-            <p>{{ restaurants|length }} مطعم على المنصة</p>
+            <p>{{ restaurants|length|plural('مطعم واحد', 'مطعمان', 'مطاعم', 'مطعماً') }} على المنصة</p>
         </div>
     </div>
 
@@ -150,18 +150,9 @@
         <select id="wilayaFilter" class="fb-select">
             <option value="">كل الولايات</option>
             {% set active = restaurants|map(attribute='wilaya')|unique|list %}
-            {% if active %}
-            <optgroup label="فيها مطاعم">
-                {% for w in active|sort %}
-                <option value="{{ w }}">{{ w }}</option>
-                {% endfor %}
-            </optgroup>
-            {% endif %}
-            <optgroup label="كل ولايات الجزائر">
-                {% for code, name in WILAYAS %}
-                <option value="{{ name }}">{{ code }} - {{ name }}</option>
-                {% endfor %}
-            </optgroup>
+            {% for code, name in WILAYAS %}
+            <option value="{{ name }}">{{ code }} - {{ name }}{% if name in active %} ✓{% endif %}</option>
+            {% endfor %}
         </select>
         <select id="cuisineFilter" class="fb-select">
             <option value="">كل التصنيفات</option>
@@ -203,13 +194,12 @@
                         <span class="r-badge closed"><i class="fas fa-circle"></i> مغلق</span>
                         {% endif %}
 
-                        {% if restaurant.rating > 0 %}
                         <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}"
-                           class="r-rate" title="اقرأ التقييمات">
-                            <i class="fas fa-star"></i> {{ restaurant.rating }}
-                            {% if restaurant.total_reviews %}<b>({{ restaurant.total_reviews }})</b>{% endif %}
+                           class="r-rate {{ 'new' if not restaurant.total_reviews }}" title="اقرأ التقييمات">
+                            {% if restaurant.total_reviews %}
+                            <i class="fas fa-star"></i> {{ restaurant.rating }} <b>({{ restaurant.total_reviews }})</b>
+                            {% else %}جديد{% endif %}
                         </a>
-                        {% endif %}
                     </div>
 
                     {% if current_user.is_authenticated and current_user.role == 'admin' %}
@@ -247,19 +237,22 @@
                         <div class="r-foot">
                             <span class="r-chip">
                                 <i class="fas fa-bowl-food"></i>
-                                {{ restaurant.menu_items.filter_by(is_available=True).count() }} وجبة
+                                {{ restaurant.menu_items.filter_by(is_available=True).count()|plural('وجبة واحدة', 'وجبتان', 'وجبات', 'وجبة') }}
                             </span>
-                            {% if current_user.is_authenticated and current_user.role == 'customer' %}
-                                {% if restaurant.is_open %}
-                                <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-order">
-                                    اطلب الآن <i class="fas fa-arrow-left"></i>
-                                </a>
-                                {% else %}
-                                <button class="btn btn-order disabled" disabled>مغلق</button>
-                                {% endif %}
+                            {% set dishes = restaurant.menu_items.filter_by(is_available=True).count() %}
+                            {% if not dishes %}
+                            <button class="btn btn-order disabled" disabled title="لم يضف المطعم أطباقاً بعد">
+                                القائمة غير متاحة
+                            </button>
+                            {% elif not restaurant.is_open %}
+                            <button class="btn btn-order disabled" disabled>مغلق الآن</button>
+                            {% elif current_user.is_authenticated and current_user.role == 'customer' %}
+                            <a href="{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}" class="btn btn-order">
+                                عرض القائمة <i class="fas fa-arrow-left"></i>
+                            </a>
                             {% else %}
-                            <a href="{{ url_for('login') }}" class="btn btn-order outline">
-                                أدخل وأطلب <i class="fas fa-arrow-left"></i>
+                            <a href="{{ url_for('restaurant_reviews', restaurant_id=restaurant.id) }}" class="btn btn-order outline">
+                                عرض القائمة <i class="fas fa-arrow-left"></i>
                             </a>
                             {% endif %}
                         </div>
@@ -515,7 +508,7 @@
         noRes.style.display = shown ? 'none' : '';
         reset.hidden = !filtering;
         count.textContent = filtering
-            ? 'يظهر ' + shown + ' من ' + items.length + ' مطعم'
+            ? 'يظهر ' + shown + ' من أصل ' + items.length
             : '';
     }
 
@@ -769,6 +762,7 @@
 .r-rate { text-decoration: none; transition: background .2s; }
 .r-rate:hover { background: #fff; }
 .r-rate b { color: #7b8c84; font-weight: 600; font-size: .74rem; }
+.r-rate.new { color: #6d7f77; font-weight: 600; font-size: .74rem; }
 .r-admin { padding: 10px 14px 0; }
 .r-body { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
 .r-body h5 { margin: 0 0 2px; font-size: 1.1rem; font-weight: 700; }

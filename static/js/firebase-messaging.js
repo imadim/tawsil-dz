@@ -1,77 +1,64 @@
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "delivery-dz.firebaseapp.com",
-  projectId: "delivery-dz",
-  storageBucket: "delivery-dz.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+/* ============================================================
+   إشعارات Firebase (اختيارية)
+   ------------------------------------------------------------
+   الإشعارات الأساسية في التطبيق تعمل عبر Socket.IO و Service Worker
+   الخاص بالـ PWA (‎/sw.js‎) — انظر base.html. هذا الملف يضيف Firebase
+   فقط لمن يريد إشعارات Push تصل والتطبيق مغلق تماماً لأيام.
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+   لا يفعل شيئاً ما لم تُضبط مفاتيح حقيقية في window.FIREBASE_CONFIG.
+   الكود القديم كان يستدعي messaging.useServiceWorker() وهي دالة
+   أُزيلت من Firebase 9، فكان يرمي خطأ في كل صفحة.
+   ============================================================ */
 
-// Request permission and get token
-function requestNotificationPermission() {
-    return Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-            console.log('✅ Notification permission granted');
-            return messaging.getToken({
-                vapidKey: 'YOUR_VAPID_KEY'  // Get from Firebase Console
+(function () {
+    'use strict';
+
+    const cfg = window.FIREBASE_CONFIG;
+
+    // بلا إعدادات حقيقية لا نحمّل شيئاً — ولا نرمي أخطاء في الطرفية
+    if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('YOUR_')) {
+        return;
+    }
+    if (typeof firebase === 'undefined' || !firebase.messaging) {
+        console.warn('Firebase SDK غير محمّل — تُستعمل إشعارات Socket.IO وحدها');
+        return;
+    }
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+        return;
+    }
+
+    try {
+        firebase.initializeApp(cfg);
+        const messaging = firebase.messaging();
+
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .then(function (registration) {
+                if (Notification.permission !== 'granted') return null;
+                // الطريقة الحديثة: تمرير التسجيل إلى getToken مباشرة
+                return messaging.getToken({
+                    vapidKey: cfg.vapidKey,
+                    serviceWorkerRegistration: registration
+                });
+            })
+            .then(function (token) {
+                if (!token) return;
+                return fetch('/api/push/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token })
+                }).catch(function () { /* التسجيل اختياري */ });
+            })
+            .catch(function (err) {
+                console.warn('تعذّر تفعيل إشعارات Firebase:', err && err.message);
             });
-        } else {
-            console.log('❌ Notification permission denied');
-            return null;
-        }
-    }).then((token) => {
-        if (token) {
-            console.log('FCM Token:', token);
-            // Send token to server
-            registerFCMToken(token);
-        }
-    }).catch((err) => {
-        console.error('Error getting token:', err);
-    });
-}
 
-function registerFCMToken(token) {
-    fetch('/api/fcm/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('✅ FCM token registered');
-    })
-    .catch(error => {
-        console.error('❌ Error registering token:', error);
-    });
-}
-
-// Handle foreground messages
-messaging.onMessage((payload) => {
-    console.log('Message received:', payload);
-    
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/static/images/logo.png'
-    };
-    
-    new Notification(notificationTitle, notificationOptions);
-});
-
-// Auto-request permission on page load
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-            console.log('✅ Service Worker registered');
-            messaging.useServiceWorker(registration);
-            requestNotificationPermission();
-        })
-        .catch((err) => {
-            console.error('❌ Service Worker registration failed:', err);
+        messaging.onMessage(function (payload) {
+            const n = (payload && payload.notification) || {};
+            if (typeof showToast === 'function') {
+                showToast(n.title || 'توصيل DZ', n.body || '');
+            }
         });
-}
+    } catch (err) {
+        console.warn('تعذّر تهيئة Firebase:', err && err.message);
+    }
+})();

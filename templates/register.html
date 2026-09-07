@@ -341,7 +341,7 @@
                                 <option value="customer">🛒 زبون -  </option>
                                 <option value="driver">🏍️ سائق -  </option>
                             
-                               <option value="restaurant">🍽️ مطعم -  </option>
+                               <option value="restaurant">🍽️ صاحب مطعم</option>
                                
                             </select>
                         </div>
@@ -483,6 +483,20 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+/* اختيار «صاحب مطعم» يحوّل إلى نموذج تسجيل المطعم المخصّص —
+   فيه حقل التصنيف وخريطة تعمل، بدل القسم الداخلي الذي كانت خريطته فارغة. */
+(function () {
+    const role = document.getElementById('role') || document.querySelector('select[name="role"]');
+    if (!role) return;
+    role.addEventListener('change', function () {
+        if (this.value === 'restaurant') {
+            window.location.href = "{{ url_for('restaurant_register') }}";
+        }
+    });
+})();
+</script>
+
 <script>
 // Show/hide restaurant fields with animation
 document.getElementById('role').addEventListener('change', function() {
