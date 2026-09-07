@@ -1514,6 +1514,33 @@ def restaurant_orders():
 # ملف السائق وعرض خدمته
 # ════════════════════════════════════════════
 
+def save_upload(file, folder='general'):
+    """حفظ صورة مرفوعة بأمان.
+
+    ترجع رابط الصورة أو None. لا ترفع استثناءً أبداً: إن غابت مكتبة الصور
+    (Pillow) أو فشل الحفظ على القرص، تُسجَّل المشكلة وتكمل بقية البيانات
+    في الحفظ بدل أن تسقط الصفحة كلها بخطأ 500.
+    """
+    if not file or not getattr(file, 'filename', ''):
+        return None
+    try:
+        from services import save_image
+    except Exception as e:            # Pillow غير مثبّتة أو خطأ استيراد
+        app.logger.warning('تعذّر تحميل خدمة الصور: %s', e)
+        flash('تعذّر رفع الصورة حالياً — حُفظت بقية البيانات.', 'warning')
+        return None
+    try:
+        imgs = save_image(file, folder)
+    except Exception as e:
+        app.logger.warning('فشل حفظ الصورة (%s): %s', folder, e)
+        flash('تعذّر حفظ الصورة — حُفظت بقية البيانات.', 'warning')
+        return None
+    if not imgs:
+        flash('صيغة الصورة غير مدعومة — استعمل JPG أو PNG.', 'warning')
+        return None
+    return imgs.get('original') or imgs.get('medium') or imgs.get('thumbnail')
+
+
 VEHICLE_TYPES = ['دراجة نارية', 'سيارة', 'دراجة هوائية', 'شاحنة صغيرة']
 
 
@@ -1527,7 +1554,6 @@ def driver_profile():
     offer = DriverOffer.query.filter_by(driver_id=current_user.id).first()
 
     if request.method == 'POST':
-        from services import save_image
         section = request.form.get('section', 'vehicle')
 
         if section == 'vehicle':
@@ -1541,14 +1567,9 @@ def driver_profile():
 
             for field, attr, folder in [('photo', 'photo_url', 'drivers'),
                                         ('vehicle_photo', 'vehicle_photo_url', 'vehicles')]:
-                f = request.files.get(field)
-                if f and f.filename:
-                    try:
-                        imgs = save_image(f, folder)
-                        if imgs:
-                            setattr(current_user, attr, imgs.get('original') or imgs.get('thumbnail'))
-                    except Exception as e:
-                        flash(f'تعذّر حفظ الصورة: {e}', 'warning')
+                url = save_upload(request.files.get(field), folder)
+                if url:
+                    setattr(current_user, attr, url)
             db.session.commit()
             flash('حُفظت بيانات مركبتك', 'success')
 
@@ -2334,27 +2355,24 @@ def add_menu_item(restaurant_id):
         return redirect(url_for('restaurant_dashboard'))
     
     if request.method == 'POST':
-        from services import save_image
         
-        name_ar = request.form.get('name_ar')
-        description_ar = request.form.get('description_ar')
-        price = float(request.form.get('price'))
-        category_ar = request.form.get('category_ar')
+        name_ar = (request.form.get('name_ar') or '').strip()
+        description_ar = (request.form.get('description_ar') or '').strip()
+        category_ar = (request.form.get('category_ar') or '').strip()
+        try:
+            price = float(request.form.get('price') or 0)
+        except (TypeError, ValueError):
+            price = -1
+        if not name_ar or price <= 0:
+            flash('اكتب اسم الطبق وسعراً صحيحاً أكبر من صفر.', 'danger')
+            return redirect(url_for('add_menu_item'))
         
         # Handle image upload
-        image_url = None
-        image_thumbnail = None
-        
-        if 'item_image' in request.files:
-            file = request.files['item_image']
-            if file and file.filename:
-                images = save_image(file, folder='menu_items')
-                if images:
-                    image_url = images['original']
-                    image_thumbnail = images['thumbnail']
+        image_url = save_upload(request.files.get('item_image'), 'menu_items')
+        image_thumbnail = image_url
         
         menu_item = MenuItem(
-            restaurant_id=restaurant_id,
+            restaurant_id=restaurant.id,
             name_ar=name_ar,
             description_ar=description_ar,
             price=price,
@@ -2387,22 +2405,26 @@ def edit_menu_item(item_id):
         return redirect(url_for('restaurant_dashboard'))
     
     if request.method == 'POST':
-        from services import save_image
         
-        menu_item.name_ar = request.form.get('name_ar')
-        menu_item.description_ar = request.form.get('description_ar')
-        menu_item.price = float(request.form.get('price'))
-        menu_item.category_ar = request.form.get('category_ar')
+        _name = (request.form.get('name_ar') or '').strip()
+        try:
+            _price = float(request.form.get('price') or 0)
+        except (TypeError, ValueError):
+            _price = -1
+        if not _name or _price <= 0:
+            flash('اكتب اسم الطبق وسعراً صحيحاً أكبر من صفر.', 'danger')
+            return redirect(url_for('edit_menu_item', item_id=menu_item.id))
+        menu_item.name_ar = _name
+        menu_item.description_ar = (request.form.get('description_ar') or '').strip()
+        menu_item.price = _price
+        menu_item.category_ar = (request.form.get('category_ar') or '').strip()
         menu_item.is_available = request.form.get('is_available') == 'on'
         
         # Handle image upload
-        if 'item_image' in request.files:
-            file = request.files['item_image']
-            if file and file.filename:
-                images = save_image(file, folder='menu_items')
-                if images:
-                    menu_item.image_url = images['original']
-                    menu_item.image_thumbnail = images['thumbnail']
+        _img = save_upload(request.files.get('item_image'), 'menu_items')
+        if _img:
+            menu_item.image_url = _img
+            menu_item.image_thumbnail = _img
         
         db.session.commit()
         flash('تم التحديث بنجاح!', 'success')
